@@ -1,0 +1,131 @@
+= Quick Start Guide
+:navtitle: Quick Start
+
+Follow these steps to build Adaptadocx in all three formats *HTML*, *PDF*, and *DOCX* and run the QA checks.
+
+== Prerequisites
+
+Perform the xref:installation.adoc[Installation].
+
+== One-shot build (all formats)
+
+.Docker (recommended)
+[source,bash]
+----
+# Local branch only (default)
+docker run --rm -v "$(pwd)":/work adaptadocx make build-all
+
+# All tags (multiversion)
+docker run --rm -v "$(pwd)":/work adaptadocx make build-all BUILD_SCOPE=tags
+----
+
+.Local
+[source,bash]
+----
+# Local branch only (default)
+make build-all
+
+# All tags (multiversion)
+make build-all BUILD_SCOPE=tags
+----
+
+This creates versioned artefacts:
+
+* `build/site/<locale>/<version>/` -- HTML
+* `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf` -- PDF
+* `build/docx/<locale>/<version>/adaptadocx-<locale>.docx` -- DOCX
+* `site/<locale>/<version>/_downloads/` -- published downloads per version
+
+== Verify artefacts
+
+[source,bash]
+----
+tree -L 3 build/
+----
+
+Expected outline (example):
+
+----
+build/
+├── site/
+│   ├── en/
+│   │   └── 0.1.2/
+│   └── ru/
+│       └── 0.1.2/
+├── pdf/
+│   ├── en/
+│   │   └── 0.1.2/
+│   └── ru/
+│       └── 0.1.2/
+└── docx/
+    ├── en/
+    │   └── 0.1.2/
+    └── ru/
+        └── 0.1.2/
+----
+
+== Build a single format
+
+.HTML only
+[source,bash]
+----
+make build-html
+----
+
+.PDF only
+[source,bash]
+----
+make build-pdf
+# Output:  build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf
+# Copied to: site/<locale>/<version>/_downloads/
+----
+
+.DOCX only
+[source,bash]
+----
+make build-docx
+# Output:  build/docx/<locale>/<version>/adaptadocx-<locale>.docx
+# Copied to: site/<locale>/<version>/_downloads/
+----
+
+== Run quality checks
+
+[source,bash]
+----
+make test
+----
+
+Tools executed:
+
+* *Vale* -> `vale.xml`
+* *htmltest* -> `htmltest.log`
+* *Shellcheck* -> console output
+
+View results:
+
+[source,bash]
+----
+cat vale.xml
+cat htmltest.log
+----
+
+== Package for release
+
+[source,bash]
+----
+make release
+----
+
+This creates `adaptadocx-docs-<version>.zip` in `build/`.
+
+== Edit-build-preview loop
+
+. Edit `.adoc` files in `docs/en/...` or `docs/ru/...`.
+. Clean previous build: `make clean`
+. Re-build: `make build-all`
+. Open `build/site/en/<version>/index.html` (or `build/site/en/current/index.html`) in a browser; use `ru/` for Russian.
+
+== Next steps
+
+* xref:system-architecture.adoc[]
+* xref:installation.adoc[]

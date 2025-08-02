@@ -1,0 +1,51 @@
+extends: default-with-font-fallbacks
+page:
+  layout: portrait
+  margin: [0.75in, 1in, 0.75in, 1in]
+  size: A4
+  numbering:
+    start-at: 1
+base:
+  font-color: #333333
+  line-height-length: 17
+  line-height: 1.2
+heading:
+  font-color: #315569
+  font-style: bold
+  h1-font-size: 18
+  h2-font-size: 16
+  h3-font-size: 14
+  margin-top: 10
+  margin-bottom: 10
+link:
+  font-color: #0000EE
+code:
+  font-size: 10.5
+  background-color: #f5f5f5
+  border-color: #dddddd
+  border-radius: 4
+footer:
+  columns: =100%
+  recto:
+    center:
+      content: '{page-number}'
+  verso:
+    center:
+      content: '{page-number}'
+title-page:
+  align: center
+  logo:
+    image: image:logo.png[pdfwidth=80%]
+    align: center
+    top: 20%
+  title:
+    top: 55%
+    font-size: 18
+    font-style: bold
+    font-color: #315569
+    align: center
+  subtitle:
+    top: 60%
+    font-size: 12
+    font-color: #666666
+    align: center

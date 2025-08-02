@@ -1,0 +1,5 @@
+CheckExternal: false           # не пингаем внешние ссылки
+DirectoryURLScheme: "file"     # для Antora-style «index.html ⇒ /»
+CheckInternalHash: true
+IgnoreInternalEmptyHash: true
+IgnoreDirectoryMissingTrailingSlash: true

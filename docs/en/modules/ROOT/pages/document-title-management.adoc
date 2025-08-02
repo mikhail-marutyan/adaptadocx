@@ -1,0 +1,137 @@
+= Document Title Management
+:navtitle: Title Management
+
+Titles are resolved in a strict three-level hierarchy:
+
+[cols="1,3,2,2",options="header"]
+|===
+|Priority |Source |Scope |Override
+
+|*1*
+|Component file `docs/*/antora.yml`
+|Component name / version
+|Overrides all
+
+|*2*
+|Playbook `antora-playbook-*.yml`
+|Site branding
+|Overrides documents
+
+|*3*
+|Attributes inside `.adoc`
+|Single file
+|Lowest
+|===
+
+== Component-level titles
+
+File `docs/en/antora.yml`
+
+[source,yaml]
+----
+name: en
+title: Adaptadocx Documentation
+version: '1.0'
+display_version: '1.0'
+
+asciidoc:
+  attributes:
+    component-title: '{title}'
+    component-version: '{version}'
+    document-title: '{component-title} {component-version}'
+----
+
+The Russian component `docs/ru/antora.yml` mirrors this, using localized strings and `name: ru`.
+
+[cols="1,3",options="header"]
+|===
+|Attribute |Purpose
+
+|`title`
+|Primary label in the left nav
+
+|`version`
+|Machine-readable version
+
+|`display_version`
+|Human-readable version
+
+|`component-title`
+|Reusable attribute
+
+|`document-title`
+|Template for derived titles
+|===
+
+== Playbook-level titles
+
+Excerpt `antora-playbook-en.yml`
+
+[source,yaml]
+----
+site:
+  title: Adaptadocx Documentation
+  start_page: en::index.adoc
+
+asciidoc:
+  attributes:
+    site-title: '{site.title}'
+    page-title-pattern: '{site-title} - {page-title}'
+----
+
+The Russian playbook `antora-playbook-ru.yml` uses localized values.
+
+[cols="1,3",options="header"]
+|===
+|Attribute |Purpose
+
+|`site.title`
+|Main HTML `<title>`
+
+|`site-title`
+|Reusable attribute
+
+|`page-title-pattern`
+|Global HTML title template
+|===
+
+== Document-level titles
+
+Inside any `.adoc` file:
+
+[source,asciidoc]
+----
+= System Architecture
+:navtitle: Architecture
+----
+
+[cols="1,3,2",options="header"]
+|===
+|Attribute |Effect |May be overridden
+
+|`= Title`
+|H1 in rendered content
+|Metadata can change
+
+|`:navtitle:`
+|Menu entry
+|Component `nav` may replace
+|===
+
+== Output handling
+
+* *HTML* -- `<title>` is resolved via `page-title-pattern` → component → document.
+* *PDF* -- title block uses component values; version label comes from `asciidoctor-pdf` with `-a revnumber=<version>` (Makefile passes the site version).
+* *DOCX* -- metadata is loaded from per-locale files `config/meta-en.yml` / `config/meta-ru.yml`; the Makefile generates per-version temporary files `build/docx/meta-<locale>-<version>.yml` by replacing `{page-version}`.
+
+== Troubleshooting
+
+* *Inconsistent titles* -- ensure component `title`/`version` and playbook attributes are aligned.
+* *Wrong PDF title/version* -- check `-a revnumber` usage in the Makefile and `config/default-theme.yml`.
+* *Nav vs. page mismatch* -- adjust `:navtitle:` or the component `nav.adoc`.
+
+== Related Pages
+
+* xref:system-architecture.adoc[]
+* xref:ci-cd-workflows.adoc[]
+* xref:build-orchestration.adoc[]

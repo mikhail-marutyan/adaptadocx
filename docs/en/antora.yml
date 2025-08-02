@@ -1,0 +1,9 @@
+name: en
+version: true
+title: Adaptadocx Documentation
+nav:
+  - modules/ROOT/nav.adoc
+start_page: ROOT:index.adoc
+asciidoc:
+  attributes:
+    download-root: /_downloads

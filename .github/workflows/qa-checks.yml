@@ -1,0 +1,161 @@
+name: QA checks
+
+on: 
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: qa-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VALE_VERSION: "2.29.4"
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+
+      - name: Run shellcheck
+        id: lint
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          files=$(find scripts -name '*.sh' || true)
+          echo '<checkstyle version="4.3">' > shellcheck.xml
+          if [ -n "$files" ]; then
+            if ! shellcheck -f checkstyle $files >> shellcheck.xml; then
+              exit 1
+            fi
+          else
+            echo '<file name="no-scripts"><error message="No shell scripts found" severity="info" source="shellcheck"/></file>' >> shellcheck.xml
+          fi
+          echo '</checkstyle>' >> shellcheck.xml
+
+      - name: Upload shellcheck report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shellcheck-report
+          path: shellcheck.xml
+
+      - name: Fail if shellcheck failed
+        if: steps.lint.outcome == 'failure'
+        run: exit 1
+
+  vale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install Vale
+        run: |
+          set -euo pipefail
+          curl -fsSL -o vale.tar.gz "https://github.com/errata-ai/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
+          tar -xzf vale.tar.gz
+          sudo mv vale /usr/local/bin/
+          vale --version
+
+      - name: Install Asciidoctor
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends ruby asciidoctor
+
+      - name: Vale console log
+        id: vale_txt
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          vale --no-exit docs/ | tee vale.log
+          test ${PIPESTATUS[0]} -eq 0
+
+      - name: Vale XML report
+        id: vale_xml
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          : > vale.xml
+          if ! vale --config=.vale.ini --output=checkstyle.tmpl --no-exit docs/ > vale.xml 2>&1; then
+            true
+          fi
+          if [ ! -s vale.xml ]; then
+            echo '<checkstyle><error severity="error" source="vale.runtime" message="Vale produced no output"/></checkstyle>' > vale.xml
+          fi
+
+      - name: Decide on severity
+        id: verdict
+        run: |
+          if grep -q 'severity="error"' vale.xml; then
+            echo "has_error=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_error=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload Vale artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vale-report
+          path: |
+            vale.log
+            vale.xml
+
+      - name: Fail if Vale failed
+        if: steps.vale_xml.outcome == 'failure' || steps.verdict.outputs.has_error == 'true'
+        run: exit 1
+
+  htmltest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all tags
+        run: git fetch --tags origin
+
+      - name: Build docs image
+        run: docker build -t adaptadocx:latest .
+
+      - name: Build docs in container
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/work" \
+            adaptadocx:latest \
+            bash -lc 'npm ci --no-audit --prefer-offline && make clean && make build-all'
+
+      - name: Run htmltest
+        id: lint
+        continue-on-error: true
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/work" \
+            adaptadocx:latest \
+            bash -lc 'set -o pipefail; htmltest -c .htmltest.yml build/site 2>&1 | tee /work/htmltest.log; exit ${PIPESTATUS[0]}'
+
+      - name: Upload htmltest log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: htmltest-log
+          path: htmltest.log
+
+      - name: Fail if htmltest failed
+        if: steps.lint.outcome == 'failure'
+        run: exit 1

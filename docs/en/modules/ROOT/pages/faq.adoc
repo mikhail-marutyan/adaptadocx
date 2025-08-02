@@ -1,0 +1,192 @@
+= Frequently Asked Questions
+:navtitle: FAQ
+
+This FAQ collects common questions about installing, configuring, using, and troubleshooting Adaptadocx.
+
+== Installation and Setup
+
+.What are the minimum system requirements for Adaptadocx?
+[%collapsible]
+====
+Adaptadocx requires:
+
+* *Node.js 18+* with the npm package manager.
+* *Ruby ≥ 2.7* -- used by Asciidoctor PDF.
+* *4 GB free disk space* -- repository + build artefacts.
+* *Git* -- fetches the repository and provides version control.
+
+A Docker-based setup reduces host prerequisites to *Docker Engine 20.10+* and 4 GB of free disk space.
+====
+
+.Should I use Docker or a local installation?
+[%collapsible]
+====
+Docker is recommended in most cases because it provides:
+
+* *Consistency* -- identical toolchain and versions on every platform.
+* *Simplicity* -- the container bundles all dependencies.
+* *Isolation* -- no interference with existing tools on the host.
+* *Reliability* -- the image is tested and known to build successfully.
+
+Choose a local installation only when you explicitly need the tools on your host or must integrate with an existing environment.
+====
+
+.How do I verify that my installation works?
+[%collapsible]
+====
+Run a minimal HTML build and check the output.
+
+[source,bash]
+----
+# Docker workflow
+docker run --rm -v "$(pwd)":/work adaptadocx:latest make build-html
+
+# Local workflow
+make build-html
+----
+
+A successful build places HTML artefacts in:
+
+* `build/site/en/<version>/`
+* `build/site/ru/<version>/`
+
+You may also see a `current/` symlink-like version depending on your Antora config.
+====
+
+== Build System
+
+.What causes "No rule to make target" errors?
+[%collapsible]
+====
+The Makefile could not find the requested rule. Common causes:
+
+* *Wrong directory* -- run `make` from the repository root.
+* *Missing Makefile* -- confirm that `Makefile` exists and is readable.
+* *Typographical error* -- list available targets with:
++
+[source,bash]
+----
+grep -E '^[A-Za-z0-9_-]+:' Makefile | cut -d: -f1 | sort -u
+----
+* *File-system permissions* -- ensure that `Makefile` is readable by the current user.
+====
+
+== Output Formats
+
+.Why do Cyrillic characters look incorrect in PDF?
+[%collapsible]
+====
+Ensure that DejaVu fonts are available to the host running Asciidoctor PDF.
+
+[source,bash]
+----
+# Debian / Ubuntu
+sudo apt-get install -y fonts-dejavu fonts-dejavu-extra
+
+# Verify presence
+fc-list | grep -i dejavu
+
+# Confirm theme references
+grep -i dejavu config/default-theme.yml
+----
+====
+
+.How can I customise PDF styling?
+[%collapsible]
+====
+Edit the theme file `config/default-theme.yml`. All Asciidoctor PDF theme keys are supported (font families, heading sizes, margins, etc.).
+====
+
+.Where are the generated PDFs and DOCXs saved?
+[%collapsible]
+====
+Each build produces *versioned* outputs per locale:
+
+* *PDF* -- `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
+* *DOCX* -- `build/docx/<locale>/<version>/adaptadocx-<locale>.docx`
+
+They are also copied to the site downloads:
+
+* `site/<locale>/<version>/_downloads/adaptadocx-<locale>.pdf`
+* `site/<locale>/<version>/_downloads/adaptadocx-<locale>.docx`
+====
+
+.Can I customise DOCX cover pages?
+[%collapsible]
+====
+Yes -- adjust the Lua filter `docx/coverpage.lua`. For example, to ensure a title and version are always present:
+
+[source,lua]
+----
+function Meta(meta)
+  meta.title   = meta.title   or pandoc.MetaString(os.getenv('DOC_TITLE') or 'Adaptadocx Documentation')
+  meta.version = meta.version or os.getenv('VERSION') or 'dev'
+  return meta
+end
+----
+====
+
+.How do I fix broken links in the HTML output?
+[%collapsible]
+====
+Run link validation and correct failing references.
+
+[source,bash]
+----
+# Build HTML then test links
+make build-html
+htmltest -c .htmltest.yml build/site
+
+# Review the log
+cat htmltest.log
+----
+====
+
+== Multilingual Documentation
+
+.Can I add languages other than English and Russian?
+[%collapsible]
+====
+Yes -- follow the established component pattern:
+
+. Create a new directory `docs/<locale>/`.
+. Add `docs/<locale>/antora.yml` for the component.
+. Add a playbook `antora-playbook-<locale>.yml`.
+. Provide locale metadata in `config/meta-<locale>.yml`.
+. Configure search stemming for the new language in the Lunr extension.
+====
+
+== CI/CD and Deployment
+
+.Why do GitHub Actions builds fail while local builds succeed?
+[%collapsible]
+====
+Typical causes include:
+
+* *Environment differences* -- CI may have newer or older tool versions.
+* *Case sensitivity* -- Windows file names vs. case-sensitive Linux runners.
+* *Resource limits* -- memory constraints or job timeouts.
+* *Missing secrets* -- environment variables not configured in repository settings.
+
+Enable verbose logging (`set -x`, `--debug`, or similar flags) in workflow steps to pinpoint the issue.
+====
+
+== Migration and Upgrades
+
+.How do I migrate existing documentation to Adaptadocx?
+[%collapsible]
+====
+Use the following phased approach:
+
+. *Content conversion* -- translate existing material to AsciiDoc.
+. *Structure organisation* -- arrange files into Antora components and modules.
+. *Configuration* -- create component descriptors and playbooks.
+. *Link updates* -- replace hard-coded paths with `xref` syntax.
+. *Testing* -- run `make build-all && make test` to validate the result.
+====
+
+== Additional Resources
+
+* xref:system-architecture.adoc[]
+* xref:ci-cd-workflows.adoc[]
+* xref:build-orchestration.adoc[]

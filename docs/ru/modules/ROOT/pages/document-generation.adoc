@@ -1,0 +1,191 @@
+= Генерация документов
+:navtitle: Генерация документов
+
+Adaptadocx формирует три типа артефактов из единого дерева AsciiDoc:
+
+* *HTML* -- двуязычный статический сайт с навигацией, поиском и скачиваемыми артефактами в `DOCX` и `PDF`.
+* *PDF* -- буклет для печати с настраиваемой темой.
+* *DOCX* -- редактируемый документ.
+
+Все конвейеры используют общий контент и выход *assembler* Antora, а затем применяют формат-специфические шаги. Выходы версионируются по локали и по тегу.
+
+== Конвейер HTML
+
+.Схема потока HTML
+[source,text]
+----
+AsciiDoc → Antora → UI bundle → Lunr index → HTML site
+----
+
+=== Playbook Antora (EN)
+
+Файл `antora-playbook-en.yml`
+
+[source,yaml]
+----
+site:
+  title: Adaptadocx Documentation
+  start_page: en::index.adoc
+  url: https://adaptadocx.netlify.app/en
+
+content:
+  branches: ~
+  tags: '*'
+  sources:
+    - url: .
+      start_path: docs/en
+
+urls:
+  html_extension_style: default
+
+ui:
+  bundle:
+    url: ./custom-ui/ui-bundle.zip
+    snapshot: true
+  supplemental_files: ./custom-ui/supplemental_ui
+
+output:
+  dir: ./build/site
+
+antora:
+  extensions:
+    - require: '@antora/pdf-extension'
+      configFile: ./antora-assembler.yml
+    - require: '@antora/lunr-extension'
+      languages: [en]
+----
+
+* *Search* -- Lunr включается на уровне локали (см. `languages`).
+* *UI bundle* -- каталог `custom-ui/` переопределяет макеты, CSS и JS. Ссылки в хедере указывают на версионированные загрузки в `_downloads`.
+
+=== Конфигурация assembler
+
+Файл `antora-assembler.yml`
+
+[source,yaml]
+----
+assembly:
+  root_level: 0
+  section_merge_strategy: fuse
+  xml_ids: true
+component_version_filter:
+  names: '**'
+build:
+  dir: ./build/asm
+  keep_source: true
+  command: 'true'
+  publish: false
+  qualify_exports: true
+----
+
+*Assembler* складывает экспортированные деревья в `build/asm/<locale>/<version>/_exports/`.
+
+== Конвейер PDF
+
+.Схема потока PDF
+[source,text]
+----
+AsciiDoc (из assembler) → Asciidoctor PDF → theme → fonts → PDF
+----
+
+Для каждой `locale` и `version`, обнаруженных в `site/<locale>/<version>/`:
+
+. Берём `build/asm/<locale>/<version>/_exports/index.adoc`.
+. При наличии копируем изображения из `build/asm/<locale>/<version>/_images`.
+. Рендерим через `asciidoctor-pdf` с `revnumber=<version>`.
+
+Тема `config/default-theme.yml`:
+
+[source,yaml]
+----
+extends: default
+font:
+  catalog:
+    DejaVu Sans:
+      normal: DejaVuSans.ttf
+      bold: DejaVuSans-Bold.ttf
+      italic: DejaVuSans-Oblique.ttf
+      bold_italic: DejaVuSans-BoldOblique.ttf
+    DejaVu Sans Mono:
+      normal: DejaVuSansMono.ttf
+      bold: DejaVuSansMono-Bold.ttf
+page:
+  size: A4
+  margin: [2cm, 2cm, 2cm, 2cm]
+base:
+  font-family: DejaVu Sans
+  font-size: 11
+----
+
+*Размещение выходов:*
+
+* `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
+* копируется в `site/<locale>/<version>/_downloads/adaptadocx-<locale>.pdf`
+
+== Конвейер DOCX
+
+.Схема потока DOCX
+[source,text]
+----
+AsciiDoc (из assembler) → Asciidoctor DocBook → Pandoc → Lua filters → DOCX
+----
+
+Для каждой `locale` и `version`:
+
+. Читаем `build/asm/<locale>/<version>/_exports/index.adoc`.
+. Конвертируем в DocBook через `asciidoctor -b docbook5`.
+. Пайпим в `pandoc` с референсным DOCX и метаданными локали/версии.
+. При наличии `rsvg-convert` подключается фильтр конвертации `SVG→PNG`.
+
+Пример (схема соответствует тому, что делает `Makefile`):
+
+[source,bash]
+----
+# Для каждой локали/версии:
+(cd "build/asm/<locale>/<version>/_exports" && \
+  asciidoctor -b docbook5 \
+    -r extensions/collapsible_tree_processor.rb \
+    -a allow-uri-read -a revdate! -a revnumber! -a docdate! -a docdatetime! \
+    -o - index.adoc \
+| pandoc --from=docbook --to=docx \
+    --reference-doc=docx/reference.docx \
+    --metadata-file=config/meta-<locale>.yml \
+    --lua-filter=docx/coverpage.lua \
+    $( [ -x "$(command -v rsvg-convert)" ] && echo "--lua-filter=docx/svg2png.lua" ) \
+    -o "build/docx/<locale>/<version>/adaptadocx-<locale>.docx")
+----
+
+*Размещение выходов:*
+* `build/docx/<locale>/<version>/adaptadocx-<locale>.docx`
+* копируется в `site/<locale>/<version>/_downloads/adaptadocx-<locale>.docx`
+
+=== Фильтр титульной страницы
+
+Файл `docx/coverpage.lua`
+
+[source,lua]
+----
+function Meta(meta)
+  meta.version = meta.version or os.getenv('VERSION') or 'dev'
+  return meta
+end
+----
+
+== Правила версионирования
+
+* Локальная сборка по умолчанию формирует текущую ветку `HEAD` (или `BUILD_REF`) -- по одной версии на локаль.
+* Релизная сборка использует все Git-теги (`BUILD_SCOPE=tags`) -- по нескольку версий на локаль.
+* Ссылки из хедера ведут на `_downloads/adaptadocx-<locale>.(pdf|docx)` внутри текущей версии.
+
+== Диагностика
+
+* *HTML* -- битые ссылки → запустите `make test` и проверьте `htmltest.log`.
+* *PDF* -- отсутствует экспорт `index.adoc` → убедитесь, что есть `build/asm/<locale>/<version>/_exports/index.adoc` для нужной версии.
+* *DOCX* -- ошибки парсинга Pandoc → проверьте Lua-фильтры (`docx/coverpage.lua`, `docx/svg2png.lua`) и DocBook-поток.
+* *Шрифты* -- установите пакет `fonts-dejavu`, если не хватает глифов.
+
+== См. также
+
+* xref:system-architecture.adoc[]
+* xref:ci-cd-workflows.adoc[]
+* xref:build-orchestration.adoc[]

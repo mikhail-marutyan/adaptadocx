@@ -1,0 +1,145 @@
+= Управление версиями
+:navtitle: Управление версиями
+
+Adaptadocx координирует публикации документации на разных языках с помощью
+*семантического версионирования*, метаданных компонентов Antora и
+CI-workflow, основанных на Git-тегах.
+
+== Семантическое версионирование
+
+Строка версии: *MAJOR.MINOR.PATCH*
+
+[cols="1,3",options="header"]
+|===
+|Сегмент |Пояснение
+
+|MAJOR |Несовместимые изменения
+|MINOR |Новые функции без ломки
+|PATCH |Исправления ошибок / только docs
+|===
+
+.Хронология примеров
+----
+1.0.0  → первый релиз
+1.1.0  → новые возможности
+1.1.1  → фиксы / docs
+2.0.0  → несовместимое изменение
+----
+
+== Правила Git
+
+.Тег и публикация
+[source,bash]
+----
+git tag -a v1.2.0 -m "Release 1.2.0"
+git push origin --tags
+----
+
+.Типы веток
+[cols="1,2,2",options="header"]
+|===
+|Ветка |Назначение |Шаблон
+
+|main    |Стабильный код            |`main`
+|Feature |Новая функциональность    |`feature/*`
+|Release |Подготовка релиза (редко) |`release/vX.Y.Z`
+|Hot-fix |Срочный патч              |`hotfix/vX.Y.Z`
+|===
+
+== Версии компонентов Antora
+
+У каждой локали свой `antora.yml`. Для *сборок по тегам* Antora
+подставляет версию из Git-тега. Для *сборок по веткам* контент публикуется
+под псевдоверсией `current` (или именем ветки). Плейсхолдеры в репозитории
+не требуются.
+
+.Английский
+[source,yaml]
+----
+name: adaptadocx
+version: 'current'   # сборка по тегам переопределит автоматически
+title: Adaptadocx Documentation
+----
+
+.Русский
+[source,yaml]
+----
+name: adaptadocx
+version: 'current'   # сборка по тегам переопределит автоматически
+title: Документация Adaptadocx
+----
+
+== Логика определения версии
+
+Используется fallback-стратегия, чтобы и релизы по тегам, и сборки по веткам
+разрешались корректно.
+
+.Структура каталогов
+----
+build/asm/
+├── <locale>/
+│   ├── 1.2.0/      ← релиз по тегу v1.2.0
+│   └── current/    ← сборка по ветке без тега
+----
+
+.Порядок
+. Ищем `…/<version>/`.
+. Если нет, используем `…/current/`.
+
+== CI и объём сборки
+
+* *Локальные / PR-сборки* -- по умолчанию `BUILD_SCOPE=local`, собирается только
+  текущая ветка (`BUILD_REF=HEAD`).
+* *Релизные сборки* -- `BUILD_SCOPE=tags`, Antora строит все версии по Git-тегам.
+
+.Пример (release workflow)
+[source,yaml]
+----
+- name: Build docs in container
+  run: |
+    docker run --rm -v "${{ github.workspace }}:/work" adaptadocx:latest \
+      bash -lc 'npm ci --no-audit --prefer-offline && make clean && make build-all BUILD_SCOPE=tags'
+----
+
+== Размещение артефактов
+
+Версионирование кодируется *каталогами*, имена файлов стабильные.
+
+[cols="1,2",options="header"]
+|===
+|Формат |Путь вывода
+
+|PDF (EN)
+|`build/pdf/en/<version>/adaptadocx-en.pdf` → копируется в `site/en/<version>/_downloads/adaptadocx-en.pdf`
+
+|PDF (RU)
+|`build/pdf/ru/<version>/adaptadocx-ru.pdf` → копируется в `site/ru/<version>/_downloads/adaptadocx-ru.pdf`
+
+|DOCX (EN)
+|`build/docx/en/<version>/adaptadocx-en.docx` → копируется в `site/en/<version>/_downloads/adaptadocx-en.docx`
+
+|DOCX (RU)
+|`build/docx/ru/<version>/adaptadocx-ru.docx` → копируется в `site/ru/<version>/_downloads/adaptadocx-ru.docx`
+|===
+
+Ссылки в шапке UI указывают на `_downloads` *текущей версии*, например:
+
+* `'_downloads/adaptadocx-en.pdf'`
+* `'_downloads/adaptadocx-en.docx'`
+* `'_downloads/adaptadocx-ru.pdf'`
+* `'_downloads/adaptadocx-ru.docx'`
+
+== Чек-лист релиза
+
+. Обновите `version` в `package.json` при необходимости.  
+. При изменении ветки или `start_path` -- проверьте playbook’и.  
+. Соберите обе локали, проверьте индекс поиска.  
+. Поставьте тег и запушьте (`vX.Y.Z`).  
+. Убедитесь, что артефакты EN и RU лежат в `site/<locale>/<version>/_downloads/`
+  и `build/(pdf|docx)/<locale>/<version>/`.
+
+== См. также
+
+* xref:system-architecture.adoc[]
+* xref:ci-cd-workflows.adoc[]
+* xref:build-orchestration.adoc[]

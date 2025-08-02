@@ -1,0 +1,18 @@
+/* 1. Header height variable */
+:root {
+  --navbar-height: 48px;
+}
+
+/* 2. Offset sticky nav (TOC sidebar) */
+@media screen and (min-width: 768px) {
+  .nav-container,
+  #toc.sidebar {
+    top: var(--navbar-height);
+    padding-top: 0.25rem;
+  }
+}
+
+/* 3. Scroll padding for anchor links */
+html {
+  scroll-padding-top: calc(var(--navbar-height) + 0.5rem);
+}

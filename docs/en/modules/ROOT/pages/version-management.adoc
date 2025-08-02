@@ -1,0 +1,139 @@
+= Version Management
+:navtitle: Version Management
+
+Adaptadocx coordinates releases across languages using *semantic versioning*, Antora component metadata, and Git-tagged CI workflows.
+
+== Semantic versioning
+
+Version string: *MAJOR.MINOR.PATCH*
+
+[cols="1,3",options="header"]
+|===
+|Segment |Meaning
+
+|MAJOR |Breaking changes
+|MINOR |Backward-compatible features
+|PATCH |Bug fixes / docs only
+|===
+
+.Example timeline
+----
+1.0.0  → initial release
+1.1.0  → new features
+1.1.1  → fixes / docs
+2.0.0  → breaking refactor
+----
+
+== Git guidelines
+
+.Tag and push
+[source,bash]
+----
+git tag -a v1.2.0 -m "Release 1.2.0"
+git push origin --tags
+----
+
+.Branch types
+[cols="1,2,2",options="header"]
+|===
+|Branch |Purpose |Pattern
+
+|main    |Stable code                |`main`
+|Feature |New work                   |`feature/*`
+|Release |Preparation branch (rare)  |`release/vX.Y.Z`
+|Hot-fix |Urgent patch               |`hotfix/vX.Y.Z`
+|===
+
+== Antora component versions
+
+Each language keeps its own `docs/en/antora.yml` and `docs/ru/antora.yml`.  
+For **tag builds** Antora resolves the version from Git tags; for *branch builds* the content is published under a `current` (or branch-named) pseudo-version. No placeholders are required in the repo.
+
+.English
+[source,yaml]
+----
+name: adaptadocx
+version: 'current'   # tag builds override this automatically
+title: Adaptadocx Documentation
+----
+
+.Russian
+[source,yaml]
+----
+name: adaptadocx
+version: 'current'   # tag builds override this automatically
+title: Документация Adaptadocx
+----
+
+== Version resolution logic
+
+The build uses a fallback so both tagged releases and branch builds resolve correctly.
+
+.Directory layout
+----
+build/asm/
+├── <locale>/
+│   ├── 1.2.0/      ← Git-tagged release v1.2.0
+│   └── current/    ← Untagged builds from the branch
+----
+
+.Resolution order
+. Look for `…/<version>/`.
+. If not found, use `…/current/`.
+
+== CI and build scope
+
+* *Local/PR builds* -- default `BUILD_SCOPE=local`, only the current branch (`BUILD_REF=HEAD`).  
+* *Release builds* -- `BUILD_SCOPE=tags`, all Git tags are built by Antora.
+
+Example (release workflow):
+
+[source,yaml]
+----
+- name: Build docs in container
+  run: |
+    docker run --rm -v "${{ github.workspace }}:/work" adaptadocx:latest \
+      bash -lc 'npm ci --no-audit --prefer-offline && make clean && make build-all BUILD_SCOPE=tags'
+----
+
+== Artefact layout
+
+Versioning is encoded in *directories*, filenames stay stable.
+
+[cols="1,2",options="header"]
+|===
+|Format |Output path
+
+|PDF (EN)
+|`build/pdf/en/<version>/adaptadocx-en.pdf` → copied to `site/en/<version>/_downloads/adaptadocx-en.pdf`
+
+|PDF (RU)
+|`build/pdf/ru/<version>/adaptadocx-ru.pdf` → copied to `site/ru/<version>/_downloads/adaptadocx-ru.pdf`
+
+|DOCX (EN)
+|`build/docx/en/<version>/adaptadocx-en.docx` → copied to `site/en/<version>/_downloads/adaptadocx-en.docx`
+
+|DOCX (RU)
+|`build/docx/ru/<version>/adaptadocx-ru.docx` → copied to `site/ru/<version>/_downloads/adaptadocx-ru.docx`
+|===
+
+Header menu links in the UI point at `_downloads/` of the *current version*, for example:
+
+* `'_downloads/adaptadocx-en.pdf'`
+* `'_downloads/adaptadocx-en.docx'`
+* `'_downloads/adaptadocx-ru.pdf'`
+* `'_downloads/adaptadocx-ru.docx'`
+
+== Translation release checklist
+
+. Bump the app version in `package.json` if applicable.  
+. Verify playbooks if `branches` or `start_path` changed.  
+. Build both locales and verify search indexing.  
+. Tag and push (`vX.Y.Z`).  
+. Confirm CI artefacts exist for *EN* and *RU* under `site/<locale>/<version>/_downloads/` and `build/(pdf|docx)/<locale>/<version>/`.
+
+== Related pages
+
+* xref:system-architecture.adoc[]
+* xref:ci-cd-workflows.adoc[]
+* xref:build-orchestration.adoc[]

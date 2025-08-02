@@ -1,0 +1,140 @@
+= Installation & Setup
+:navtitle: Installation
+
+Adaptadocx can run either inside a Docker container (recommended) or on a locally configured toolchain.
+
+== System Requirements
+
+=== Docker
+
+* *Docker Engine 20.10+* (or Docker Desktop)
+* ~4 GB free disk space
+* Internet access to pull the image
+
+=== Local
+
+* *Node.js 20+* with npm
+* *Python 3.11+* (optional, for `build.py` script)
+* *Ruby ≥ 2.7* (required by Asciidoctor PDF)
+* *Graphviz* -- renders SVG and other diagrams in PDF/DOCX
+* *Vale* -- style and grammar linting
+* *htmltest* -- link-integrity validation
+* *Shellcheck* -- shell-script analysis
+* *Git*
+* ~2 GB free disk space
+
+== Docker Installation (recommended)
+
+. Clone the repository
++
+[source,bash]
+----
+git clone https://github.com/mikhail-marutyan/adaptadocx.git
+cd adaptadocx
+----
+
+. Build the image
++
+[source,bash]
+----
+docker build -t adaptadocx .
+----
+
+. Generate the full documentation set
++
+[source,bash]
+----
+# Local branch only (default)
+docker run --rm -v "$(pwd)":/work adaptadocx make build-all
+
+# All tags (multiversion)
+docker run --rm -v "$(pwd)":/work adaptadocx make build-all BUILD_SCOPE=tags
+----
+
+== Local Installation
+
+. Install Node.js dependencies
++
+[source,bash]
+----
+npm ci --no-audit --no-fund
+----
+
+. Install Ruby + Asciidoctor PDF
++
+[source,bash]
+----
+# Debian / Ubuntu
+sudo apt-get update
+sudo apt-get install -y ruby ruby-dev
+gem install asciidoctor-pdf
+----
+
+. Install QA tools and Graphviz
++
+[source,bash]
+----
+# Vale
+wget -qO- https://github.com/errata-ai/vale/releases/download/v2.29.4/vale_2.29.4_Linux_64-bit.tar.gz \
+| tar -xz && sudo mv vale /usr/local/bin/
+
+# htmltest
+wget -qO- https://github.com/wjdp/htmltest/releases/download/v0.17.0/htmltest_0.17.0_linux_amd64.tar.gz \
+| tar -xz && sudo mv htmltest /usr/local/bin/
+
+# Shellcheck
+sudo apt-get install -y shellcheck
+
+# Graphviz
+sudo apt-get install -y graphviz        # Linux
+brew install graphviz                    # macOS
+----
+
+. Build all formats
++
+[source,bash]
+----
+# Local branch only (default)
+make build-all
+
+# All tags (multiversion)
+make build-all BUILD_SCOPE=tags
+----
+
+. Run quality checks
++
+[source,bash]
+----
+make test
+----
+
+== Output locations
+
+* *HTML* -- `build/site/<locale>/<version>/`
+* *PDF* -- `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
+* *DOCX* -- `build/docx/<locale>/<version>/adaptadocx-<locale>.docx`
+* Published downloads -- `site/<locale>/<version>/_downloads/`
+
+== Troubleshooting
+
+=== Docker
+
+* *Build permission error* -- confirm the Docker daemon is running and your user is in the *docker* group.
+* *Volume write error* -- check file-system permissions on the mounted path.
+
+=== Local
+
+* *Incorrect Node.js version* -- use *nvm* to install Node.js 20.
+* *Ruby gem fails* -- ensure `ruby-dev` and a C compiler are present.
+* *Vale / htmltest not found* -- verify they are in `$PATH`.
+
+=== Build
+
+* *PDF font issues* -- install DejaVu fonts (`sudo apt-get install -y fonts-dejavu`).
+* *SVG missing in PDF* -- install `rsvg-convert` (`sudo apt-get install -y librsvg2-bin`).
+* *QA failures* -- review `vale.xml`, `htmltest.log`, and Shellcheck output.
+
+== Next Steps
+
+* xref:quick-start.adoc[]
+* xref:system-architecture.adoc[]

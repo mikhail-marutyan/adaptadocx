@@ -1,0 +1,12 @@
+assembly:
+  root_level: 0
+  section_merge_strategy: fuse
+  xml_ids: true
+component_version_filter:
+  names: '**'
+build:
+  dir: ./build/asm
+  keep_source: true
+  command: 'true'
+  publish: false
+  qualify_exports: true

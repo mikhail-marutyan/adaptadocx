@@ -1,0 +1,30 @@
+site:
+  title: Adaptadocx Documentation
+  start_page: en::index.adoc
+  url: https://adaptadocx.netlify.app/en
+
+content:
+  branches: ~
+  tags: '*'
+  sources:
+    - url: .
+      start_path: docs/en
+
+urls:
+  html_extension_style: default
+
+ui:
+  bundle:
+    url: ./custom-ui/ui-bundle.zip
+    snapshot: true
+  supplemental_files: ./custom-ui/supplemental_ui
+
+output:
+  dir: ./build/site
+
+antora:
+  extensions:
+    - require: '@antora/pdf-extension'
+      configFile: ./antora-assembler.yml
+    - require: '@antora/lunr-extension'
+      languages: [en]

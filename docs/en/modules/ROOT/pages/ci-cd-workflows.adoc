@@ -1,0 +1,205 @@
+= CI/CD Workflows
+:navtitle: CI/CD Workflows
+
+Adaptadocx automates linting, QA, security checks, and packaged builds with *GitHub Actions*. Artefacts are delivered as a ZIP and as versioned downloads inside the site.
+
+== Workflow Matrix
+
+[cols="1,2,3",options="header"]
+|===
+|Workflow |Trigger |Jobs
+
+|QA Checks
+|`pull_request` → *main*
+|*Shellcheck* · *Vale* · *htmltest* (parallel), build in Docker
+
+|Security Audit
+|`pull_request` → *main*
+|*OSV-Scanner* · *Sandworm* · banned-pattern scan (non-blocking)
+
+|Release
+|`push` → tags (`'*'`)
+|Docker build → `make build-all BUILD_SCOPE=tags` → *htmltest* + *Vale* → ZIP + upload artefacts
+
+|Deploy
+|after *Release* on tag
+|Download built site → Netlify deploy `--prod`
+|===
+
+== QA Checks
+
+File: `/.github/workflows/qa-checks.yml`
+
+* Jobs: *shellcheck*, *vale*, *htmltest*.
+* Trigger: `pull_request` to *main*.
+* Each job runs with timeouts and uploads reports on failure.
+* HTML for *htmltest* is built inside the same Docker image as in release.
+
+Build step in the HTML testing job:
+
+[source,yaml]
+----
+- name: Build docs image
+  run: docker build -t adaptadocx:latest .
+
+- name: Build docs in container
+  run: |
+    docker run --rm \
+      -v "${{ github.workspace }}:/work" \
+      adaptadocx:latest \
+      bash -lc 'npm ci --no-audit --prefer-offline && make clean && make build-all'
+----
+
+Reports are always uploaded (examples):
+
+[source,yaml]
+----
+- name: Upload htmltest log
+  if: always()
+  uses: actions/upload-artifact@v4
+  with:
+    name: htmltest-log
+    path: htmltest.log
+----
+
+== Security Audit
+
+File: `/.github/workflows/security-audit.yml`
+
+* Trigger: `pull_request` → *main*.
+* Steps: *OSV-Scanner*, *Sandworm audit*, *banned-pattern* scan, then a short summary to `$GITHUB_STEP_SUMMARY`.
+* Behavior: all checks use `continue-on-error: true` -- the audit warns but does not block the PR.
+* Outputs:
+** `reports/osv.json` -- results from OSV (skipped if no lockfiles are present)
+** `reports/sandworm.json` -- `@sandworm/audit` report
+** `reports/banned-patterns-report.txt` -- custom grep-gate results
+
+Key snippets:
+
+.OSV-Scanner
+[source,yaml]
+----
+- name: OSV scan
+  id: osv
+  continue-on-error: true
+  run: |
+    files=$(git ls-files | grep -E 'package-lock\.json$|pnpm-lock\.yaml$|yarn\.lock$' || true)
+    if [[ -z "$files" ]]; then
+      echo "scanned=false" >> "$GITHUB_OUTPUT"
+      exit 0
+    fi
+    docker run --rm -v "$PWD:/src" -w /src ghcr.io/google/osv-scanner:latest \
+      --format json --output /src/reports/osv.json $files || true
+    echo "scanned=true" >> "$GITHUB_OUTPUT"
+----
+
+.Sandworm audit
+[source,yaml]
+----
+- name: Sandworm audit
+  id: sandworm
+  continue-on-error: true
+  run: npx -y @sandworm/audit@latest --json > reports/sandworm.json
+----
+
+.Banned patterns
+[source,yaml]
+----
+- name: Banned patterns
+  id: banned
+  continue-on-error: true
+  run: node scripts/scan-banned-patterns.cjs
+----
+
+.Summary
+[source,yaml]
+----
+- name: Summarise results
+  if: always()
+  run: |
+    echo '### Security audit summary' >> "$GITHUB_STEP_SUMMARY"
+    hits=$(grep -c '^BANNED' reports/banned-patterns-report.txt 2>/dev/null || echo 0)
+    echo "**Banned-pattern hits:** $hits" >> "$GITHUB_STEP_SUMMARY"
+    if [[ "${{ steps.osv.outputs.scanned }}" == "true" ]]; then
+      echo 'OSV scan ✔' >> "$GITHUB_STEP_SUMMARY"
+    else
+      echo 'OSV scan ⏭ (skipped)' >> "$GITHUB_STEP_SUMMARY"
+    fi
+    [[ -f reports/sandworm.json ]] \
+      && echo 'Sandworm scan ✔' >> "$GITHUB_STEP_SUMMARY" \
+      || echo 'Sandworm scan ✖' >> "$GITHUB_STEP_SUMMARY"
+----
+
+== Release
+
+File: `/.github/workflows/release.yml`
+
+Two jobs: *build* and *deploy*.
+
+=== Build
+
+* Builds the Docker image.
+* Runs a full **multiversion** build over tags via `BUILD_SCOPE=tags`.
+* Validates with *htmltest* and *Vale* in-container.
+* Uploads logs and the built site.
+* Packs `build/` into `docs-${{ github.sha }}.zip`.
+
+Snippet:
+
+[source,yaml]
+----
+- name: Build docs image
+  run: docker build -t adaptadocx:latest .
+
+- name: Build docs in container
+  run: |
+    docker run --rm \
+      -v "${{ github.workspace }}:/work" \
+      adaptadocx:latest \
+      bash -lc 'npm ci --no-audit --prefer-offline && make clean && make build-all BUILD_SCOPE=tags'
+----
+
+=== Deploy
+
+Triggered only for tag pushes. Publishes the previously uploaded site to Netlify.
+
+[source,yaml]
+----
+deploy:
+  needs: build
+  runs-on: ubuntu-latest
+  if: github.event_name == 'push' && github.ref && startsWith(github.ref, 'refs/tags/')
+  steps:
+    - name: Download built site
+      uses: actions/download-artifact@v4
+      with:
+        name: built-site
+        path: site
+
+    - name: Deploy to Netlify
+      run: |
+        npx netlify-cli deploy \
+          --dir=site \
+          --site="${{ secrets.NETLIFY_SITE_ID }}" \
+          --auth="${{ secrets.NETLIFY_AUTH_TOKEN }}" \
+          --prod
+----
+
+== What gets built
+
+* Local QA builds the current branch (default Make mode `BUILD_SCOPE=local`) and runs *htmltest* on `build/site`.
+* Release builds *all tags* (`BUILD_SCOPE=tags`) so that versioned downloads are available per tag under:
+** `site/<locale>/<version>/_downloads/`
+** corresponding artefacts under `build/pdf/<locale>/<version>/` and `build/docx/<locale>/<version>/`.
+
+== Debugging tips
+
+* Reproduce a failing step locally:
++
+[source,bash]
+----
+docker build -t adaptadocx:latest .
+docker run -it --rm -v "$PWD":/work adaptadocx:latest bash
+----
+* Inspect Make execution graph: `make -d build-all`
+* Ensure the runner has full Git history and tags (`actions/checkout@v4` with `fetch-depth: 0` and `git fetch --tags origin`).

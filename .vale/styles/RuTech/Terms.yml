@@ -1,0 +1,12 @@
+# Терминология: предлагаем предпочтительный вариант.
+extends: substitution
+message: "Используйте «%s» вместо «%s»."
+level: suggestion
+ignorecase: true
+scope: text
+
+swap:
+  API: API-интерфейс
+  логин: вход
+  логиниться: авторизоваться
+  софт: ПО

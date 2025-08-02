@@ -1,0 +1,70 @@
+name: Security audit
+
+on: 
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Checkout & deps ---------------------------------------------------
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci --ignore-scripts
+
+      # 2) Folder for reports -----------------------------------------------
+      - run: mkdir -p reports
+
+      # 3) OSV‑Scanner (scan lockfiles if present) ---------------------------
+      - name: OSV scan
+        id: osv
+        continue-on-error: true
+        shell: bash
+        run: |
+          files=$(git ls-files | grep -E 'package-lock\.json$|pnpm-lock\.yaml$|yarn\.lock$' || true)
+          if [[ -z "$files" ]]; then
+            echo "scanned=false" >> "$GITHUB_OUTPUT"
+            echo "No lockfiles → skipping OSV"
+            exit 0
+          fi
+          # Run inside container with /src as working dir so relative paths resolve
+          docker run --rm -v "$PWD:/src" -w /src ghcr.io/google/osv-scanner:latest \
+            --format json --output /src/reports/osv.json $files || true
+          echo "scanned=true" >> "$GITHUB_OUTPUT"
+
+      # 4) Sandworm — postinstall / protestware -----------------------------
+      - name: Sandworm audit
+        id: sandworm
+        continue-on-error: true
+        run: npx -y @sandworm/audit@latest --json > reports/sandworm.json
+
+      # 5) Grep‑signature gate ----------------------------------------------
+      - name: Banned patterns
+        id: banned
+        continue-on-error: true
+        run: node scripts/scan-banned-patterns.cjs
+
+      # 6) Short summary -----------------------------------------------------
+      - name: Summarise results
+        if: always()
+        shell: bash
+        run: |
+          echo '### Security audit summary' >> "$GITHUB_STEP_SUMMARY"
+          hits=$(grep -c '^BANNED' reports/banned-patterns-report.txt 2>/dev/null || echo 0)
+          echo "**Banned‑pattern hits:** $hits" >> "$GITHUB_STEP_SUMMARY"
+
+          if [[ "${{ steps.osv.outputs.scanned }}" == "true" ]]; then
+            echo 'OSV scan ✔' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'OSV scan ⏭ (skipped)' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          [[ -f reports/sandworm.json ]] \
+            && echo 'Sandworm scan ✔' >> "$GITHUB_STEP_SUMMARY" \
+            || echo 'Sandworm scan ✖' >> "$GITHUB_STEP_SUMMARY"

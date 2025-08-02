@@ -1,0 +1,12 @@
+* xref:index.adoc[]
+* xref:quick-start.adoc[]
+* xref:authoring-guide.adoc[]
+* Руководство DocOps
+** xref:system-architecture.adoc[]
+** xref:installation.adoc[]
+** xref:document-generation.adoc[]
+** xref:build-orchestration.adoc[]
+** xref:document-title-management.adoc[]
+** xref:version-management.adoc[]
+** xref:ci-cd-workflows.adoc[]
+* xref:faq.adoc[]

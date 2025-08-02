@@ -1,0 +1,186 @@
+= System Architecture
+:navtitle: Architecture
+
+Adaptadocx is a modular documentation system built on *Antora*.  
+The stack is organised into five layers:
+
+. Content sources
+. Build orchestration
+. Format generation (HTML, PDF, DOCX)
+. Quality assurance
+. CI-driven security and packaging
+
+== Core Components
+
+[cols="1,2,2",options="header"]
+|===
+|Layer |Directory / File |Role
+
+|Content
+|`docs/en/`, `docs/ru/`
+|Language-specific AsciiDoc sources
+
+|Content
+|`docs/*/modules/ROOT/pages`
+|Individual `.adoc` pages
+
+|Content
+|`docs/*/antora.yml`
+|Component name, version, navigation
+
+|Config
+|`antora-playbook-en.yml`, `antora-playbook-ru.yml`
+|Site-level config (sources, UI, output)
+
+|Config
+|`antora-assembler.yml`
+|Assembler settings for PDF/DOCX exports
+
+|Config
+|`config/`
+|PDF theme and per-locale metadata (`meta-*.yml`)
+
+|UI
+|`custom-ui/`
+|CSS/JS and layout overrides (downloads point to `_downloads`)
+
+|Build
+|`Makefile`, `build.py`
+|Primary / alternative orchestrators
+
+|Container
+|`Dockerfile`
+|Reproducible tool-chain for CI and local runs
+
+|CI
+|`.github/workflows/*.yml`
+|QA, security audit, and release workflows
+|===
+
+== Configuration Precedence
+
+[cols="1,2,2",options="header"]
+|===
+|Priority |File |Scope
+
+|*1*
+|`docs/*/antora.yml`
+|Component
+
+|*2*
+|`antora-playbook-*.yml`
+|Entire site
+
+|*3*
+|Inline attributes
+|Single document
+|===
+
+== Build Pipeline
+
+. *build-html* -- Antora generates the HTML site into `build/site/` and assembly exports into `build/asm/`. Build scope is controlled by *BUILD_SCOPE* (`local` by default, or `tags`) and *BUILD_REF* (defaults to `HEAD`).
+. *build-pdf* -- consumes `build/asm/` and emits versioned PDFs under `build/pdf/<locale>/<version>/`, then copies them to `site/<locale>/<version>/_downloads/`.
+. *build-docx* -- consumes `build/asm/` and emits versioned DOCXs under `build/docx/<locale>/<version>/`, then copies them to `site/<locale>/<version>/_downloads/`.
+. *make test* -- runs Vale, htmltest, Shellcheck.
+. *Packaging* -- `make release` zips the build output (e.g., `adaptadocx-docs-<version>.zip`).
+
+NOTE: `build/asm/` holds the intermediate assemblies produced by `@antora/pdf-extension`. `build/site/` is the final HTML website.
+
+=== HTML flow
+
+[source,text]
+----
+AsciiDoc → Antora → UI bundle → Lunr index → HTML site
+----
+
+* *Search* -- Lunr with English/Russian stemmers.
+* *SVG* diagrams render natively in the browser.
+
+=== PDF flow
+
+[source,text]
+----
+AsciiDoc → Asciidoctor PDF → theme → fonts → PDF
+----
+
+* *Theme* -- `config/default-theme.yml`.
+* *Fonts* -- DejaVu (Latin + Cyrillic).
+* *SVG* -- pre-converted with `rsvg-convert` when available.
+
+=== DOCX flow
+
+[source,text]
+----
+AsciiDoc → Pandoc → Lua filter → metadata → DOCX
+----
+
+.Command (EN example)
+[source,bash]
+----
+pandoc --from asciidoc \
+       --to docx \
+       --lua-filter=docx/coverpage.lua \
+       --metadata-file=config/meta-en.yml \
+       -o build/docx/en/0.1.2/adaptadocx-en.docx \
+       docs/en/modules/ROOT/pages/*.adoc
+----
+
+== Quality Assurance
+
+[cols="1,2,2",options="header"]
+|===
+|Tool |Checks |Output
+
+|*Vale* |Style, spelling |`vale.xml`
+|*htmltest* |Link integrity |`htmltest.log`
+|*Shellcheck* |Shell-script lint |Console
+|===
+
+== Build Scope Controls
+
+[cols="1,3,2",options="header"]
+|===
+|Variable |Meaning |Default
+
+|`BUILD_SCOPE`
+|`local` -- build only the current branch; `tags` -- build all Git tags
+|`local`
+
+|`BUILD_REF`
+|Branch/ref to build in local mode (e.g., `my-feature`, `HEAD`)
+|`HEAD`
+|===
+
+== Container Image
+
+* *Base* -- Node.js 20 + Ruby ≥ 2.7
+* *Extras* -- Asciidoctor PDF, Pandoc, Vale, htmltest, Shellcheck, Graphviz, DejaVu fonts
+
+The image is built once and reused by all CI jobs.
+
+== CI Workflows
+
+[cols="1,3,2",options="header"]
+|===
+|Workflow |What it does |Trigger
+
+|QA Checks
+|Vale, htmltest, Shellcheck
+|`pull_request` (to `main`)
+
+|Security Audit
+|OSV-Scanner, Sandworm, banned-pattern scan
+|`pull_request` → `main`
+
+|Release
+|Docker build, multiversion docs (`BUILD_SCOPE=tags`), zip artefacts, deploy
+|`push` to tags
+|===
+
+NOTE: Release uploads a full site build and packaged artefacts.
+
+== Related Pages
+
+* xref:build-orchestration.adoc[]
+* xref:document-generation.adoc[]
+* xref:ci-cd-workflows.adoc[]

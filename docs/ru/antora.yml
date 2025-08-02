@@ -1,0 +1,9 @@
+name: ru
+version: true
+title: Документация Adaptadocx
+nav:
+  - modules/ROOT/nav.adoc
+start_page: ROOT:index.adoc
+asciidoc:
+  attributes:
+    download-root: /_downloads

@@ -1,0 +1,184 @@
+= Руководство автора
+:navtitle: Руководство автора
+
+В этом разделе описан процесс работы автора, отвечающего за создание и поддержку документации.
+
+== Обзор
+
+* Пишите материал в *AsciiDoc*.
+* Проверяйте локально (*Vale* -- стиль, *htmltest* -- ссылки, предпросмотр сборки).
+* Фиксируйте изменения и открывайте pull request.
+* CI формирует *HTML* / *PDF* / *DOCX* и запускает QA-проверки.
+* Мультиверсийный сайт по Git-тегам; для каждой версии доступны собственные загрузки в `_downloads`.
+
+== Структура проекта
+
+[source]
+----
+docs/
+├── en/                    # компонент для английской версии
+│   ├── antora.yml         # метаданные компонента
+│   └── modules/ROOT/      # основной модуль Antora
+│       ├── pages/         # страницы AsciiDoc
+│       ├── assets/        # статика
+│       │   └── images/    # локальные изображения
+│       └── attachments/   # файлы для скачивания (идут в _downloads)
+└── ru/                    # компонент для русской версии
+    ├── antora.yml
+    └── modules/ROOT/
+        ├── pages/
+        ├── assets/
+        │   └── images/
+        └── attachments/
+----
+
+Каждый язык оформлен как отдельный компонент Antora; названия и версии могут отличаться.
+
+== Подготовка окружения
+
+. Выполните xref:installation.adoc[Installation & Setup].
+. Клонируйте репозиторий и установите пакеты Node.js:
++
+[source,bash]
+----
+npm ci --no-audit --no-fund
+----
+. Проверьте цепочку инструментов первичной сборкой:
++
+[source,bash]
+----
+make build-all
+----
+
+== Режимы сборки
+
+*Локальный* -- по умолчанию. Собирается только текущая ветка *HEAD* или ветка, указанная в *BUILD_REF*.
++
+[source,bash]
+----
+make build-all
+make build-all BUILD_REF=my-feature
+----
+
+*Теги* -- мультиверсионная сборка по всем Git-тегам.
++
+[source,bash]
+----
+make build-all BUILD_SCOPE=tags
+----
+
+Переменные Make: *BUILD_SCOPE* = *local* или *tags*, *BUILD_REF* по умолчанию `HEAD`.
+
+== Артефакты и размещение
+
+*PDF*
+* `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
+* копируется в `site/<locale>/<version>/_downloads/adaptadocx-<locale>.pdf`
+
+*DOCX*
+* `build/docx/<locale>/<version>/adaptadocx-<locale>.docx`
+* копируется в `site/<locale>/<version>/_downloads/adaptadocx-<locale>.docx`
+
+Ссылки *PDF* и *DOCX* в шапке указывают на `_downloads` текущей версии.
+
+== Ежедневный процесс
+
+. *Редактируйте* файлы `.adoc` в соответствующем языковом компоненте.
+. *Просматривайте* сайт локально:
++
+[source,bash]
+----
+make build-html
+----
+. *Проверяйте* стиль и ссылки:
++
+[source,bash]
+----
+make test
+----
+. *Формируйте все форматы* при необходимости пакета для ревью:
++
+[source,bash]
+----
+make build-all
+----
+. *Проверьте* артефакты в `build/` и загрузки в `site/<locale>/<version>/_downloads`.
+
+== Проверка перед коммитом
+
+Запускайте три основные проверки:
+[source,bash]
+----
+vale docs/
+make build-html
+htmltest -c .htmltest.yml build/site
+----
+
+== Процесс pull request
+
+. Создайте ветку фичи:
++
+[source,bash]
+----
+git checkout -b feat/short-description
+----
+. Внесите изменения и выполните локальную сборку:
++
+[source,bash]
+----
+make build-all && make test
+----
+. Закоммитьте, запушьте и откройте PR.
+
+CI прикрепляет к запуску `vale.xml` и `htmltest.log`.
+
+== Конвейеры CI
+
+*Release* (теги):
+* триггер -- пуш в тег;
+* сборка в Docker с `BUILD_SCOPE=tags`;
+* проверка *htmltest* и *Vale*;
+* загрузка собранного сайта и прод-деплой.
+
+*QA checks* (pull request в `main`):
+* линт shell-скриптов, запуск *Vale*;
+* сборка и *htmltest* для текущей ветки.
+
+*Security audit* (pull request в `main`):
+* неблокирующие проверки: *OSV-Scanner*, *Sandworm*, поиск запрещённых паттернов;
+* краткая сводка публикуется в отчёте запуска.
+
+== Процесс перевода
+
+. Напишите или обновите английскую страницу.
+. Скопируйте файл в зеркальный путь `docs/ru/` и переведите.
+. Проверьте кросс-ссылки в обоих языках.
+. Запустите `make build-html` и убедитесь, что поиск работает.
+. Откройте pull request.
+
+== Инструментарий
+
+[cols="1,2",options="header"]
+|===
+|Категория |Инструменты / Файлы
+
+|Редактирование
+|Редактор с поддержкой AsciiDoc
+
+|Валидация
+|*Vale*, *htmltest*, *Shellcheck*
+
+|Сборка
+|`Makefile`, `Dockerfile`
+
+|Конфигурация
+|`antora-playbook-en.yml`, `antora-playbook-ru.yml`, `antora-assembler.yml`, `.vale.ini`, `config/default-theme.yml`
+
+|CI
+|`.github/workflows/release.yml`, `.github/workflows/qa-checks.yml`, `.github/workflows/security-audit.yml`
+|===
+
+== См. также
+
+* xref:quick-start.adoc[]
+* xref:installation.adoc[]

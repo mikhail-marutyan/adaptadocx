@@ -1,0 +1,191 @@
+= Document Generation
+:navtitle: Document Generation
+
+Adaptadocx produces three artefact types from the AsciiDoc components:
+
+* *HTML* -- static web site with navigation and search.
+* *PDF* -- print-ready booklet with a custom theme.
+* *DOCX* -- editable document.
+
+All pipelines share the same content tree and the Antora *assembler* output, then apply format-specific steps. Outputs are versioned per locale and per tag.
+
+== HTML Pipeline
+
+.HTML flow
+[source,text]
+----
+AsciiDoc → Antora → UI bundle → Lunr index → HTML site
+----
+
+=== Antora playbook (EN)
+
+File `antora-playbook-en.yml`
+
+[source,yaml]
+----
+site:
+  title: Adaptadocx Documentation
+  start_page: en::index.adoc
+  url: https://adaptadocx.netlify.app/en
+
+content:
+  branches: ~
+  tags: '*'
+  sources:
+    - url: .
+      start_path: docs/en
+
+urls:
+  html_extension_style: default
+
+ui:
+  bundle:
+    url: ./custom-ui/ui-bundle.zip
+    snapshot: true
+  supplemental_files: ./custom-ui/supplemental_ui
+
+output:
+  dir: ./build/site
+
+antora:
+  extensions:
+    - require: '@antora/pdf-extension'
+      configFile: ./antora-assembler.yml
+    - require: '@antora/lunr-extension'
+      languages: [en]
+----
+
+* *Search* -- Lunr is enabled per locale (see `languages`).
+* *UI bundle* -- `custom-ui/` overrides layouts, CSS, JS. Header links point to versioned downloads under `_downloads`.
+
+=== Assembler configuration
+
+File `antora-assembler.yml`
+
+[source,yaml]
+----
+assembly:
+  root_level: 0
+  section_merge_strategy: fuse
+  xml_ids: true
+component_version_filter:
+  names: '**'
+build:
+  dir: ./build/asm
+  keep_source: true
+  command: 'true'
+  publish: false
+  qualify_exports: true
+----
+
+The assembler produces exported trees under `build/asm/<locale>/<version>/_exports/`.
+
+== PDF Pipeline
+
+.PDF flow
+[source,text]
+----
+AsciiDoc (from assembler) → Asciidoctor PDF → theme → fonts → PDF
+----
+
+*For each* `locale` and `version` discovered in `site/<locale>/<version>/`:
+
+. Resolve the exported entry file `build/asm/<locale>/<version>/_exports/index.adoc`.
+. Copy images from `build/asm/<locale>/<version>/_images` if present.
+. Render with Asciidoctor PDF and version-specific `revnumber`.
+
+Theme file `config/default-theme.yml`:
+
+[source,yaml]
+----
+extends: default
+font:
+  catalog:
+    DejaVu Sans:
+      normal: DejaVuSans.ttf
+      bold: DejaVuSans-Bold.ttf
+      italic: DejaVuSans-Oblique.ttf
+      bold_italic: DejaVuSans-BoldOblique.ttf
+    DejaVu Sans Mono:
+      normal: DejaVuSansMono.ttf
+      bold: DejaVuSansMono-Bold.ttf
+page:
+  size: A4
+  margin: [2cm, 2cm, 2cm, 2cm]
+base:
+  font-family: DejaVu Sans
+  font-size: 11
+----
+
+*Output layout*:
+
+* `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
+* copied to `site/<locale>/<version>/_downloads/adaptadocx-<locale>.pdf`
+
+== DOCX Pipeline
+
+.DOCX flow
+[source,text]
+----
+AsciiDoc (from assembler) → Asciidoctor DocBook → Pandoc → Lua filters → DOCX
+----
+
+*For each* `locale` and `version`:
+
+. Read `build/asm/<locale>/<version>/_exports/index.adoc`.
+. Convert to DocBook via Asciidoctor.
+. Pipe into Pandoc with reference DOCX and metadata for the target locale/version.
+. Optionally convert SVGs to PNG if `rsvg-convert` is available.
+
+Example (conceptually mirrors the Makefile):
+
+[source,bash]
+----
+# Inside CI the Makefile loops locales/versions and runs something equivalent to:
+(cd "build/asm/<locale>/<version>/_exports" && \
+  asciidoctor -b docbook5 \
+    -r extensions/collapsible_tree_processor.rb \
+    -a allow-uri-read -a revdate! -a revnumber! -a docdate! -a docdatetime! \
+    -o - index.adoc \
+| pandoc --from=docbook --to=docx \
+    --reference-doc=docx/reference.docx \
+    --metadata-file=config/meta-<locale>.yml \
+    --lua-filter=docx/coverpage.lua \
+    $( [ -x "$(command -v rsvg-convert)" ] && echo "--lua-filter=docx/svg2png.lua" ) \
+    -o "build/docx/<locale>/<version>/adaptadocx-<locale>.docx")
+----
+
+*Output layout*:
+* `build/docx/<locale>/<version>/adaptadocx-<locale>.docx`
+* copied to `site/<locale>/<version>/_downloads/adaptadocx-<locale>.docx`
+
+=== Cover-page filter
+
+File `docx/coverpage.lua`
+
+[source,lua]
+----
+function Meta(meta)
+  meta.version = meta.version or os.getenv('VERSION') or 'dev'
+  return meta
+end
+----
+
+== Versioning rules
+
+* Local builds default to the current branch `HEAD` (or `BUILD_REF`) -- single version per locale.
+* Release builds use all Git tags (`BUILD_SCOPE=tags`) -- multiple versions per locale.
+* UI header links resolve to `_downloads/adaptadocx-<locale>.(pdf|docx)` inside the current version folder.
+
+== Troubleshooting
+
+* *HTML* -- broken links → run `make test` and inspect `htmltest.log`.
+* *PDF* -- missing export file → ensure `build/asm/<locale>/<version>/_exports/index.adoc` exists for that version.
+* *DOCX* -- Pandoc parse errors → verify Lua filters (`docx/coverpage.lua`, `docx/svg2png.lua`) and the DocBook stream.
+* *Missing fonts* → install `fonts-dejavu` in your environment.
+
+== Related Pages
+
+* xref:system-architecture.adoc[]
+* xref:ci-cd-workflows.adoc[]
+* xref:build-orchestration.adoc[]

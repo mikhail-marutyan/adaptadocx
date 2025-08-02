@@ -1,0 +1,15 @@
+# Правило орфографии: ругаемся на незнакомые слова,
+# но принимаем термины из списка accept.
+extends: spelling
+message: "Проверьте слово «%s» — похоже на опечатку."
+level: error            # ломаем сборку при ошибке
+dictionary: ru_RU       # можно подключить свой *.dic; по-умолчанию en_US
+ignorecase: true
+scope: text
+
+accept:                 # список «правильных» слов
+  - Antora
+  - npm
+  - sudo
+  - Asciidoctor
+  - htmltest

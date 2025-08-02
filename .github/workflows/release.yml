@@ -1,0 +1,112 @@
+name: Release
+
+on:
+  push:
+    tags: ['*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # чтобы можно было работать с тегами
+
+      - name: Fetch all tags
+        run: git fetch --tags origin
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Show available git tags
+        run: |
+          echo "Available git tags:"
+          git tag | sort -V
+          echo "Antora will build versions for all these tags automatically with version: true"
+
+      - name: Build docs image
+        run: docker build -t adaptadocx:latest .
+
+      - name: Build docs in container
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/work" \
+            adaptadocx:latest \
+            bash -lc 'npm ci --no-audit --prefer-offline && make clean && make build-all BUILD_SCOPE=tags'
+
+      - name: Validate site (htmltest & vale)
+        run: |
+          docker run --rm -v "${{ github.workspace }}:/work" adaptadocx:latest \
+            bash -lc 'set -o pipefail; htmltest -c .htmltest.yml build/site 2>&1 | tee /work/htmltest.log; exit ${PIPESTATUS[0]}'
+          HTMLTEST_RC=$?
+          docker run --rm -v "${{ github.workspace }}:/work" adaptadocx:latest \
+            bash -lc 'set -o pipefail; vale docs/ 2>&1 | tee /work/vale.log; exit ${PIPESTATUS[0]}'
+          VALE_TXT_RC=$?
+
+          docker run --rm -v "${{ github.workspace }}:/work" adaptadocx:latest \
+            bash -lc 'set -euo pipefail; vale --config=.vale.ini --output=checkstyle.tmpl --no-exit docs/ > /work/vale.xml 2>&1 || true; [ -s /work/vale.xml ] || echo "<checkstyle><error message=\"Vale produced no output\" source=\"vale.runtime\"/></checkstyle>" > /work/vale.xml'
+          if grep -q 'severity="error"' vale.xml; then VALE_XML_RC=1; else VALE_XML_RC=0; fi
+
+          echo "htmltest exit code: ${HTMLTEST_RC}"
+          echo "vale exit code: ${VALE_TXT_RC}"
+          echo "vale xml exit code: ${VALE_XML_RC}"
+          if [[ $HTMLTEST_RC -ne 0 || $VALE_XML_RC -ne 0 ]]; then exit 1; fi
+
+      - name: Upload validation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-logs
+          path: |
+            htmltest.log
+            vale.log
+            vale.xml
+
+      - name: Upload built site
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-site
+          path: build/site
+
+      - name: Zip docs archive
+        if: always()
+        run: |
+          mkdir -p build && cd build
+          zip -rq ../docs-${{ github.sha }}.zip .
+
+      - name: Upload docs archive
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-archive
+          path: docs-${{ github.sha }}.zip
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download built site
+        uses: actions/download-artifact@v4
+        with:
+          name: built-site
+          path: site
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Deploy to Netlify
+        run: |
+          npx netlify-cli deploy \
+            --dir=site \
+            --site="${{ secrets.NETLIFY_SITE_ID }}" \
+            --auth="${{ secrets.NETLIFY_AUTH_TOKEN }}" \
+            --prod

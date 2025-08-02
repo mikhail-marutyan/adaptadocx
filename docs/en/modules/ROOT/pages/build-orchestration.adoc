@@ -1,0 +1,260 @@
+= Build Orchestration
+:navtitle: Build Orchestration
+
+== Overview
+
+The build layer is deliberately *duplicated*:
+
+* *GNU Make* -- primary entry-point used by CI and Docker
+* *build.py* -- Python 3.11+ equivalent for systems without *make*
+
+Both entry-points drive the same pipeline:
+
+* *Generation* -- HTML / PDF / DOCX
+* *Quality assurance* -- Vale, htmltest, Shellcheck
+* *Packaging* -- ZIP archive per build
+* *Containerisation* -- fully reproducible via `docker build`
+
+Use either tool -- *never mix them in one run*.
+
+== Build modes
+
+*Local* -- builds only the current branch `HEAD` or a branch set via `BUILD_REF`.
++
+[source,bash]
+----
+make build-all
+make build-all BUILD_REF=my-feature
+----
+
+*Tags* -- multiversion build over all Git tags.
++
+[source,bash]
+----
+make build-all BUILD_SCOPE=tags
+----
+
+Make variables: `BUILD_SCOPE` = `local` or `tags`; `BUILD_REF` defaults to `HEAD`.
+
+== Artefacts and layout
+
+*PDF*
+* `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
+* copied to `site/<locale>/<version>/_downloads/adaptadocx-<locale>.pdf`
+
+*DOCX*
+* `build/docx/<locale>/<version>/adaptadocx-<locale>.docx`
+* copied to `site/<locale>/<version>/_downloads/adaptadocx-<locale>.docx`
+
+== Make targets
+
+[cols="1,3",options="header"]
+|===
+|Target |Purpose
+
+|`make build-site` |HTML + PDF + DOCX (all locales)
+|`make build-html` |HTML only
+|`make build-pdf`  |PDF only
+|`make build-docx` |DOCX only
+|`make test`       |Vale • htmltest • Shellcheck
+|`make clean`      |Remove `build/`
+|`make release`    |ZIP artefacts + QA
+|`make build-all`  |Alias -> *build-site*
+|===
+
+== Python entry-points
+
+[cols="1,3",options="header"]
+|===
+|Command |Purpose
+
+|`python3 build.py build-site` |HTML + PDF + DOCX
+|`python3 build.py build-html` |HTML only
+|`python3 build.py build-pdf`  |PDF only
+|`python3 build.py build-docx` |DOCX only
+|`python3 build.py test`       |Run tests (Vale, htmltest if site exists, Shellcheck)
+|`python3 build.py clean`      |Remove `build/`
+|===
+
+*Options and defaults*:
+
+* `--scope local|tags` (default `local`)  
+  *local* builds only the current ref; *tags* builds all Git tags.
+* `--ref <git-ref>` (default `HEAD`)  
+  Used only when `--scope local`.
+* Environment variables mirror the flags: `BUILD_SCOPE`, `BUILD_REF`.
+
+*Examples*:
+
+[source,bash]
+----
+# All tags (multiversion)
+python3 build.py --scope tags build-all
+
+# Local build for a specific branch
+python3 build.py --scope local --ref my-feature build-site
+----
+
+== Primary Make targets (abridged)
+
+[source,make]
+----
+# Full build
+build-site: build-html build-pdf build-docx
+	@echo "[site] full build done"
+
+# HTML (Antora for all locales; BUILD_SCOPE/BUILD_REF control sources)
+build-html:
+	@echo "[html] start"; \
+	for l in $(LOCALES); do \
+		echo "  • $${l}"; \
+		pb="antora-playbook-$${l}.yml"; \
+		if [ "$(BUILD_SCOPE)" = "tags" ]; then \
+			npx antora "$$pb"; \
+		else \
+			bak="$$pb.bak"; \
+			cp "$$pb" "$$bak"; \
+			tr -d '\r' < "$$pb" > "$$pb.unix" && mv "$$pb.unix" "$$pb"; \
+			sed -i "s/tags: '\*'/tags: ~/" "$$pb"; \
+			sed -i "s/branches: ~$$/branches: $(BUILD_REF)/" "$$pb"; \
+			npx antora "$$pb"; \
+			mv "$$bak" "$$pb"; \
+		fi; \
+	done
+	@echo "[html] done"
+
+# PDF (versioned outputs per locale/version)
+build-pdf: build-html
+	@mkdir -p "$(PDF_DIR)"; \
+	for l in $(LOCALES); do \
+		echo "[pdf] $$l"; \
+		for version_dir in $(SITE_DIR)/$$l/*/; do \
+			if [ -d "$$version_dir" ]; then \
+				version=$$(basename "$$version_dir"); \
+				if [ "$(BUILD_SCOPE)" != "tags" ] && [ "$$version" != "$(BUILD_REF)" ] && [ "$$version" != "current" ] && [ "$$version" != "main" ]; then continue; fi; \
+				export_file=""; \
+				for candidate in "$(ASM_DIR)/$$l/$$version/_exports/index.adoc" "$(ASM_DIR)/$$l/_exports/index.adoc" "$(ASM_DIR)/_exports/$$l/$$version/index.adoc" "$(ASM_DIR)/_exports/$$l/index.adoc"; do \
+					if [ -f "$$candidate" ]; then export_file="$$candidate"; base=$$(dirname "$$(dirname "$$candidate")"); break; fi; \
+				done; \
+				[ -z "$$export_file" ] && continue; \
+				img_src="$$base/_images"; img_dst="$$(dirname "$$export_file")/$$l/$$version/_images"; \
+				[ -d "$$img_src" ] && mkdir -p "$$img_dst" && cp -r "$$img_src"/* "$$img_dst"/ || true; \
+				outdir="$(PDF_DIR)/$$l/$$version"; outfile="$$outdir/adaptadocx-$$l.pdf"; \
+				mkdir -p "$$outdir"; \
+				toc=$$( [ "$$l" = ru ] && echo '-a toc-title=Содержание' || echo '-a toc-title=Contents' ); \
+				asciidoctor-pdf $(ASCIIDOCTOR_PDF_OPTS) $$toc -a revnumber=$$version -o "$$outfile" "$$export_file"; \
+				mkdir -p "$(SITE_DIR)/$$l/$$version/_downloads"; \
+				cp "$$outfile" "$(SITE_DIR)/$$l/$$version/_downloads/adaptadocx-$$l.pdf"; \
+			fi; \
+		done; \
+	done
+	@echo "[pdf] done"
+
+# DOCX (versioned outputs per locale/version)
+build-docx: build-html
+	@mkdir -p "$(DOCX_DIR)"; \
+	for l in $(LOCALES); do \
+		echo "[docx] $$l"; \
+		for version_dir in $(SITE_DIR)/$$l/*/; do \
+			if [ -d "$$version_dir" ]; then \
+				version=$$(basename "$$version_dir"); \
+				if [ "$(BUILD_SCOPE)" != "tags" ] && [ "$$version" != "$(BUILD_REF)" ] && [ "$$version" != "current" ] && [ "$$version" != "main" ]; then continue; fi; \
+				base="$(ASM_DIR)/$$l/$$version"; \
+				img_src="$$base/_images"; img_dst="$$base/_exports/$$l/$$version/_images"; \
+				[ -d "$$img_src" ] && mkdir -p "$$img_dst" && cp -r "$$img_src"/* "$$img_dst"/ || true; \
+				outdir="$(DOCX_DIR)/$$l/$$version"; outfile="$$outdir/adaptadocx-$$l.docx"; outfile_abs="$(CURDIR)/$$outfile"; \
+				mkdir -p "$$outdir"; \
+				tmp_meta="$(CURDIR)/$(DOCX_DIR)/meta-$$l-$$version.yml"; \
+				sed "s/{page-version}/$$version/g" $(CURDIR)/config/meta-$$l.yml > "$$tmp_meta"; \
+				( cd "$$base/_exports" && asciidoctor -b docbook5 -r $(CURDIR)/extensions/collapsible_tree_processor.rb -a allow-uri-read -a revdate! -a revnumber! -a docdate! -a docdatetime! -o - index.adoc | pandoc --from=docbook --to=docx --reference-doc=$(PANDOC_REF) --metadata-file="$$tmp_meta" $(SVG_FILTER) --lua-filter=$(LUA_COVER) -o "$$outfile_abs" ); \
+				rm -f "$$tmp_meta"; \
+				mkdir -p "$(SITE_DIR)/$$l/$$version/_downloads"; \
+				cp "$$outfile" "$(SITE_DIR)/$$l/$$version/_downloads/adaptadocx-$$l.docx"; \
+			fi; \
+		done; \
+	done
+	@echo "[docx] done"
+----
+
+=== QA helpers
+
+[source,make]
+----
+test:
+	@if [ -d "$(SITE_DIR)" ]; then \
+		htmltest -c .htmltest.yml "$(SITE_DIR)"; \
+	else \
+		echo "[test] Skipping htmltest - no site built"; \
+	fi
+	@vale --config=.vale.ini docs/
+	@find scripts -name '*.sh' -print0 | xargs -0 -I{} bash -c 'tr -d "\r" < "{}" | shellcheck -'
+	@echo '[test] OK'
+----
+
+=== Service targets
+
+[source,make]
+----
+clean:
+	-rm -rf build
+	@echo '[clean] build/ removed'
+
+release: build-site test
+	@cd build && zip -rq ../"$(RELEASE_FILE)" .
+	@echo "[release] $(RELEASE_FILE) created"
+----
+
+Where `RELEASE_FILE := adaptadocx-docs-$(VERSION).zip`.
+
+== Docker workflow
+
+Docker image encapsulates the tool-chain; typical runs:
+
+[source,bash]
+----
+# Build image
+docker build -t adaptadocx:latest .
+
+# Full build
+docker run --rm -v "$(pwd)":/work adaptadocx:latest make build-site
+
+# QA-only
+docker run --rm -v "$(pwd)":/work adaptadocx:latest make test
+
+# Interactive debugging
+docker run -it --rm -v "$(pwd)":/work adaptadocx:latest bash
+----
+
+== Configuration variables
+
+|===
+|Variable |Role |Default
+|`LOCALES`      |Supported languages   |`ru en`
+|`VERSION`      |Version from Git/package.json |auto-detected
+|`BUILD_SCOPE`  |Build mode (`local` or `tags`) |`local`
+|`BUILD_REF`    |Branch to build in local mode  |`HEAD`
+|`SITE_DIR`     |HTML site directory   |`build/site`
+|`ASM_DIR`      |Antora assembly directory |`build/asm`
+|`PDF_DIR`      |PDF output directory  |`build/pdf`
+|`DOCX_DIR`     |DOCX output directory |`build/docx`
+|`PANDOC_REF`   |Reference DOCX        |`docx/reference.docx`
+|`LUA_COVER`    |Cover page Lua filter |`docx/coverpage.lua`
+|`SVG_FILTER`   |SVG→PNG Lua filter    |`docx/svg2png.lua` (if available)
+|`RELEASE_FILE` |Release archive name  |`adaptadocx-docs-$(VERSION).zip`
+|===
+
+=== Version detection
+
+[source,make]
+----
+VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null \
+             || node -p "require('./package.json').version")
+----
+
+== Troubleshooting
+
+* *Unknown target* -- run `make` from repo root
+* *Stale artefacts* -- run `make clean` before next build
+* *CI drift* -- ensure Docker tool versions match local ones
+
+See also: xref:ci-cd-workflows.adoc[]

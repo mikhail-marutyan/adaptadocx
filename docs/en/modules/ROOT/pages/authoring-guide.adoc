@@ -1,0 +1,184 @@
+= Authoring Guide
+:navtitle: Authoring Guide
+
+This guide explains the everyday workflow for writers who create and maintain documentation.
+
+== Overview
+
+* Write content in *AsciiDoc*.
+* Validate locally (*Vale* for style, *htmltest* for links, build preview).
+* Commit and open a pull request.
+* CI produces *HTML* / *PDF* / *DOCX* and runs QA checks.
+* Multiversion site per Git tags. Each version exposes its own downloads in `_downloads`.
+
+== Project structure
+
+[source]
+----
+docs/
+├── en/                    # English component
+│   ├── antora.yml         # Component metadata
+│   └── modules/ROOT/      # Default Antora module
+│       ├── pages/         # AsciiDoc pages
+│       ├── assets/        # Static assets
+│       │   └── images/    # Local images
+│       └── attachments/   # Files for download (go to _downloads)
+└── ru/                    # Russian component
+    ├── antora.yml         # Component metadata
+    └── modules/ROOT/
+        ├── pages/         # AsciiDoc pages
+        ├── assets/        # Static assets
+        │   └── images/    # Local images
+        └── attachments/   # Files for download (go to _downloads)
+----
+
+Each language is an independent Antora component; titles and versions may differ.
+
+== Environment setup
+
+. Complete xref:installation.adoc[Installation & Setup].
+. Clone the repository and install Node.js packages:
++
+[source,bash]
+----
+npm ci --no-audit --no-fund
+----
+. Perform an initial build to verify the tool-chain:
++
+[source,bash]
+----
+make build-all
+----
+
+== Build modes
+
+*Local* -- default. Builds only the current branch *HEAD* or the branch set by *BUILD_REF*.
++
+[source,bash]
+----
+make build-all
+make build-all BUILD_REF=my-feature
+----
+
+*Tags* -- multiversion build over all Git tags.
++
+[source,bash]
+----
+make build-all BUILD_SCOPE=tags
+----
+
+Make variables: *BUILD_SCOPE* = *local* or *tags*, *BUILD_REF* defaults to *HEAD*.
+
+== Artefacts and layout
+
+*PDF output*
+* `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
+* Copied to `site/<locale>/<version>/_downloads/adaptadocx-<locale>.pdf`
+
+*DOCX output*
+* `build/docx/<locale>/<version>/adaptadocx-<locale>.docx`
+* Copied to `site/<locale>/<version>/_downloads/adaptadocx-<locale>.docx`
+
+Header menu links *PDF* and *DOCX* point to `_downloads` of the current version.
+
+== Daily workflow
+
+. *Edit* `.adoc` files in the appropriate language directory.
+. *Preview* the site:
++
+[source,bash]
+----
+make build-html
+----
+. *Validate* style and links:
++
+[source,bash]
+----
+make test
+----
+. *Produce all formats* when you need review packages:
++
+[source,bash]
+----
+make build-all
+----
+. *Inspect* artefacts in `build/` and downloads under `site/<locale>/<version>/_downloads`.
+
+== Pre-commit validation
+
+Run the core checks before every commit:
+[source,bash]
+----
+vale docs/
+make build-html
+htmltest -c .htmltest.yml build/site
+----
+
+== Pull-request flow
+
+. Create a feature branch:
++
+[source,bash]
+----
+git checkout -b feat/short-description
+----
+. Make changes and run a local build:
++
+[source,bash]
+----
+make build-all && make test
+----
+. Commit, push, and open a PR.
+
+CI attaches `vale.xml` and `htmltest.log` to the run.
+
+== CI pipelines
+
+*Release* (tags):
+* Trigger: push to a tag.
+* Build in Docker with `BUILD_SCOPE=tags`.
+* Validate with *htmltest* and *Vale*.
+* Upload built site and deploy to production.
+
+*QA checks* (pull requests to `main`):
+* Lint shell scripts, run *Vale*.
+* Build and run *htmltest* for the current branch.
+
+*Security audit* (pull requests to `main`):
+* Non-blocking checks: *OSV-Scanner*, *Sandworm*, banned-pattern scan.
+* Summary published in the workflow run.
+
+== Translation workflow
+
+. Write or update the English page.
+. Copy it to the mirror path under `docs/ru/` and translate.
+. Verify cross-references in both languages.
+. Run `make build-html` and confirm search results appear.
+. Open a pull request.
+
+== Tool summary
+
+[cols="1,2",options="header"]
+|===
+|Category |Tools / Key files
+
+|Editing
+|AsciiDoc-aware editor
+
+|Validation
+|*Vale*, *htmltest*, *Shellcheck*
+
+|Build
+|`Makefile`, `Dockerfile`
+
+|Config
+|`antora-playbook-en.yml`, `antora-playbook-ru.yml`, `antora-assembler.yml`, `.vale.ini`, `config/default-theme.yml`
+
+|CI
+|`.github/workflows/release.yml`, `.github/workflows/qa-checks.yml`, `.github/workflows/security-audit.yml`
+|===
+
+== Related pages
+
+* xref:quick-start.adoc[]
+* xref:installation.adoc[]

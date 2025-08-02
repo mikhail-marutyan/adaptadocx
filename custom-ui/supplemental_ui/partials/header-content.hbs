@@ -1,0 +1,64 @@
+<header class="header">
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <a class="navbar-item" href="{{{relativize 'index.html'}}}">{{site.title}}</a>
+      <button class="navbar-burger" data-target="topbar-nav">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+    <div id="topbar-nav" class="navbar-menu">
+      <div class="navbar-end">
+        {{#if env.SITE_SEARCH_PROVIDER}}
+        <div class="navbar-item search hide-for-print">
+          <div id="search-field" class="field">
+            <input id="search-input" class="navbar-item search-input" type="text" placeholder="Search the docs">
+          </div>
+        </div>
+        {{/if}}
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#" title="Language / Язык">
+            <span class="icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+              </svg>
+            </span>
+          </a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" href="../../en/{{page.version}}/index.html">English</a>
+            <a class="navbar-item" href="../../ru/{{page.version}}/index.html">Русский</a>
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link" href="#" title="Downloads">
+            <span class="icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"/>
+              </svg>
+            </span>
+          </a>
+          <div class="navbar-dropdown">
+            {{#if (eq page.component.name 'en')}}
+            <a class="navbar-item" href="{{{relativize '_downloads/adaptadocx-en.pdf'}}}">PDF</a>
+            <a class="navbar-item" href="{{{relativize '_downloads/adaptadocx-en.docx'}}}">DOCX</a>
+            {{/if}}
+            {{#if (eq page.component.name 'ru')}}
+            <a class="navbar-item" href="{{{relativize '_downloads/adaptadocx-ru.pdf'}}}">PDF</a>
+            <a class="navbar-item" href="{{{relativize '_downloads/adaptadocx-ru.docx'}}}">DOCX</a>
+            {{/if}}
+          </div>
+        </div>
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link theme-toggle" href="#" title="Theme">
+            <span class="theme-circle"></span>
+          </a>
+          <div class="navbar-dropdown">
+            <a class="navbar-item" onclick="setTheme('light')">Light</a>
+            <a class="navbar-item" onclick="setTheme('dark')">Dark</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+</header>

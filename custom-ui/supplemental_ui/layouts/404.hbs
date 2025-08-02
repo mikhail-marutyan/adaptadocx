@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Page Not Found :: Adaptadocx</title>
+  <meta name="generator" content="Antora 3.1.10">
+  <link rel="stylesheet" href="_/css/site.css">
+  <link rel="stylesheet" href="_/css/custom.css">
+  <meta property="og:image" content="_/img/iconx128.png">
+  <meta property="og:description" content="Page Not Found">
+  <meta property="og:title" content="Adaptadocx MVP (EN)">
+  <link rel="icon" href="_/img/favicon.ico" type="image/x-icon">
+</head>
+<body class="status-404">
+  <header class="header">
+    <nav class="navbar">
+      <div class="navbar-brand">
+        <a class="navbar-item" href="/">Adaptadocx</a>
+        <button class="navbar-burger" data-target="topbar-nav">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+      <div id="topbar-nav" class="navbar-menu">
+        <div class="navbar-end">
+          <div class="navbar-item has-dropdown is-hoverable">
+            <a class="navbar-link" href="#" title="Language / Язык">
+              <span class="icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+                </svg>
+              </span>
+            </a>
+            <div class="navbar-dropdown">
+              <a class="navbar-item" href="/">English</a>
+              <a class="navbar-item" href="/">Русский</a>
+            </div>
+          </div>
+          <div class="navbar-item has-dropdown is-hoverable">
+            <a class="navbar-link" href="#" title="Downloads">
+              <span class="icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"/>
+                </svg>
+              </span>
+            </a>
+            <div class="navbar-dropdown">
+              {{#eq page.component.name 'en'}}
+              <a class="navbar-item" href="_downloads/adaptadocx-en.pdf">PDF</a>
+              <a class="navbar-item" href="_downloads/adaptadocx-en.docx">DOCX</a>
+              {{/eq}}
+              {{#eq page.component.name 'ru'}}
+              <a class="navbar-item" href="_downloads/adaptadocx-ru.pdf">PDF</a>
+              <a class="navbar-item" href="_downloads/adaptadocx-ru.docx">DOCX</a>
+              {{/eq}}
+            </div>
+          </div>
+          <div class="navbar-item has-dropdown is-hoverable">
+            <a class="navbar-link theme-toggle" href="#" title="Theme">
+              <span class="theme-circle"></span>
+            </a>
+            <div class="navbar-dropdown">
+              <a class="navbar-item" onclick="setTheme('light')">Light</a>
+              <a class="navbar-item" onclick="setTheme('dark')">Dark</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+  </header>
+  
+  <main class="article">
+    <div class="content">
+      <article class="doc">
+        <h1 class="page">Page Not Found</h1>
+        <div class="paragraph">
+          <p>The page you're looking for does not exist. It may have been moved.</p>
+        </div>
+        <div class="paragraph">
+          <p>If you arrived on this page by clicking on a link, please notify the owner of the site that the link is broken.
+          If you typed the URL of this page manually, please double check that you entered the address correctly.</p>
+        </div>
+        <div class="paragraph">
+          <p>Go back to the <a href="/">home page</a>.</p>
+        </div>
+      </article>
+    </div>
+  </main>
+  
+  <footer class="footer">
+    <div class="content has-text-centered">
+      <p>© Adaptadocx. All rights reserved.</p>
+    </div>
+  </footer>
+  <script src="_/js/site.js"></script>
+  <script async src="_/js/vendor/highlight.js"></script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+= Установка и настройка
+:navtitle: Установка и настройка
+
+Adaptadocx можно запускать в Docker-контейнере (рекомендуется) или в предварительно настроенной локальной среде.
+
+== Системные требования
+
+=== Docker
+
+* *Docker Engine 20.10+* (или Docker Desktop)
+* ≈4 ГБ свободного дискового пространства
+* Доступ в интернет для получения образа
+
+=== Локальная установка
+
+* *Node.js 20+* с npm
+* *Python 3.11+* (опционально, для `build.py`)
+* *Ruby ≥ 2.7* (требуется Asciidoctor PDF)
+* *Graphviz* -- рендер SVG и других диаграмм в PDF/DOCX
+* *Vale* -- проверка стиля и грамматики
+* *htmltest* -- проверка целостности ссылок
+* *Shellcheck* -- анализ shell-скриптов
+* *Git*
+* ≈2 ГБ свободного дискового пространства
+
+== Установка в Docker (рекомендуется)
+
+. Клонируйте репозиторий
++
+[source,bash]
+----
+git clone https://github.com/your-org/adaptadocx.git
+cd adaptadocx
+----
+
+. Постройте образ
++
+[source,bash]
+----
+docker build -t adaptadocx .
+----
+
+. Сгенерируйте полный набор документации
++
+[source,bash]
+----
+# Только текущая ветка (по умолчанию)
+docker run --rm -v "$(pwd)":/work adaptadocx make build-all
+
+# Все теги (мультиверсийная сборка)
+docker run --rm -v "$(pwd)":/work adaptadocx make build-all BUILD_SCOPE=tags
+----
+
+== Локальная установка
+
+. Установите зависимости Node.js
++
+[source,bash]
+----
+npm ci --no-audit --no-fund
+----
+
+. Установите Ruby + Asciidoctor PDF
++
+[source,bash]
+----
+# Debian / Ubuntu
+sudo apt-get update
+sudo apt-get install -y ruby ruby-dev
+gem install asciidoctor-pdf
+----
+
+. Установите инструменты QA и Graphviz
++
+[source,bash]
+----
+# Vale
+wget -qO- https://github.com/errata-ai/vale/releases/download/v2.29.4/vale_2.29.4_Linux_64-bit.tar.gz \
+| tar -xz && sudo mv vale /usr/local/bin/
+
+# htmltest
+wget -qO- https://github.com/wjdp/htmltest/releases/download/v0.17.0/htmltest_0.17.0_linux_amd64.tar.gz \
+| tar -xz && sudo mv htmltest /usr/local/bin/
+
+# Shellcheck
+sudo apt-get install -y shellcheck
+
+# Graphviz
+sudo apt-get install -y graphviz        # Linux
+brew install graphviz                    # macOS
+----
+
+. Соберите все форматы
++
+[source,bash]
+----
+# Только текущая ветка (по умолчанию)
+make build-all
+
+# Все теги (мультиверсийная сборка)
+make build-all BUILD_SCOPE=tags
+----
+
+. Запустите проверки качества
++
+[source,bash]
+----
+make test
+----
+
+== Расположение результатов
+
+* *HTML* -- `build/site/<locale>/<version>/`
+* *PDF* -- `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
+* *DOCX* -- `build/docx/<locale>/<version>/adaptadocx-<locale>.docx`
+* Публикация на сайте -- `site/<locale>/<version>/_downloads/`
+
+== Диагностика
+
+=== Docker
+
+* *Ошибка прав при сборке* -- убедитесь, что демон Docker запущен и пользователь входит в группу `docker`.
+* *Ошибка записи в том* -- проверьте права файловой системы на монтируемом пути.
+
+=== Локальная среда
+
+* *Неверная версия Node.js* -- установите Node.js 20 через `nvm`.
+* *Ошибка установки Ruby-gem* -- проверьте наличие `ruby-dev` и компилятора C.
+* *Vale / htmltest не найдены* -- проверьте, что они доступны в `$PATH`.
+
+=== Сборка
+
+* *Проблемы со шрифтами в PDF* -- установите шрифты DejaVu (`sudo apt-get install -y fonts-dejavu`).
+* *SVG не попадают в PDF* -- установите `rsvg-convert` (`sudo apt-get install -y librsvg2-bin`).
+* *Сбой проверок QA* -- изучите `vale.xml`, `htmltest.log` и вывод Shellcheck.
+
+== См. также
+
+* xref:quick-start.adoc[]
+* xref:system-architecture.adoc[]

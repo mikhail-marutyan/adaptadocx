@@ -1,0 +1,131 @@
+= Быстрый старт
+:navtitle: Быстрый старт
+
+Следуйте этим шагам, чтобы собрать Adaptadocx во всех трёх форматах *HTML*, *PDF* и *DOCX* и выполнить проверки качества.
+
+== Предварительные требования
+
+Выполните xref:installation.adoc[Установку и настройку].
+
+== Однократная сборка (все форматы)
+
+.Докер (рекомендуется)
+[source,bash]
+----
+# Только текущая ветка (по умолчанию)
+docker run --rm -v "$(pwd)":/work adaptadocx make build-all
+
+# По всем тегам (мультиверсийная сборка)
+docker run --rm -v "$(pwd)":/work adaptadocx make build-all BUILD_SCOPE=tags
+----
+
+.Локальная среда
+[source,bash]
+----
+# Только текущая ветка (по умолчанию)
+make build-all
+
+# По всем тегам (мультиверсийная сборка)
+make build-all BUILD_SCOPE=tags
+----
+
+Будут созданы версионированные артефакты:
+
+* `build/site/<locale>/<version>/` -- HTML
+* `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf` -- PDF
+* `build/docx/<locale>/<version>/adaptadocx-<locale>.docx` -- DOCX
+* `site/<locale>/<version>/_downloads/` -- опубликованные загрузки версии
+
+== Проверка артефактов
+
+[source,bash]
+----
+tree -L 3 build/
+----
+
+Ожидаемый вывод (пример):
+
+----
+build/
+├── site/
+│   ├── en/
+│   │   └── 0.1.2/
+│   └── ru/
+│       └── 0.1.2/
+├── pdf/
+│   ├── en/
+│   │   └── 0.1.2/
+│   └── ru/
+│       └── 0.1.2/
+└── docx/
+    ├── en/
+    │   └── 0.1.2/
+    └── ru/
+        └── 0.1.2/
+----
+
+== Сборка отдельных форматов
+
+.Только HTML
+[source,bash]
+----
+make build-html
+----
+
+.Только PDF
+[source,bash]
+----
+make build-pdf
+# Результат:  build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf
+# Копия:      site/<locale>/<version>/_downloads/adaptadocx-<locale>.pdf
+----
+
+.Только DOCX
+[source,bash]
+----
+make build-docx
+# Результат:  build/docx/<locale>/<version>/adaptadocx-<locale>.docx
+# Копия:      site/<locale>/<version>/_downloads/adaptadocx-<locale>.docx
+----
+
+== Запуск проверок качества
+
+[source,bash]
+----
+make test
+----
+
+Запускаются инструменты:
+
+* *Vale* -- `vale.xml`
+* *htmltest* -- `htmltest.log`
+* *Shellcheck* -- вывод в консоль
+
+Просмотр результатов:
+
+[source,bash]
+----
+cat vale.xml
+cat htmltest.log
+----
+
+== Упаковка релиза
+
+[source,bash]
+----
+make release
+----
+
+Будет создан архив `adaptadocx-docs-<version>.zip` в каталоге `build/`.
+
+== Цикл «правка -- сборка -- просмотр»
+
+. Редактируйте `.adoc`-файлы в `docs/en/...` или `docs/ru/...`.
+. Очистите предыдущую сборку: `make clean`.
+. Соберите проект: `make build-all`.
+. Откройте `build/site/en/<version>/index.html` (или `en/current/index.html`) в браузере; для русской версии используйте `build/site/ru/<version>/index.html`.
+
+== См. также
+
+* xref:system-architecture.adoc[]
+* xref:installation.adoc[]

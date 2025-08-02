@@ -1,0 +1,183 @@
+= Adaptadocx Documentation
+:navtitle: Adaptadocx Documentation
+
+Adaptadocx is a documentation-publishing system built around Antora.  
+The platform assembles multilingual AsciiDoc sources and produces three outputs: *HTML*, *PDF* and *DOCX*.  
+Built-in QA checks, security audits, and CI workflows ensure consistent quality and reproducible builds.
+
+The system currently supports:
+
+* Two locales (English and Russian)
+* Custom Antora UI theming
+* SVG diagram rendering
+* Containerised builds with Docker
+* Automated QA, security, and linting workflows
+* Multiversion site by Git tags with versioned downloads
+
+== Architecture Overview
+
+Adaptadocx follows a modular design: Antora is the core generator, while auxiliary components extend its capabilities.
+
+[cols="1,3"]
+|===
+|Component |Purpose
+
+|Documentation Sources
+|AsciiDoc content for EN and RU in `docs/`
+
+|Configuration
+|PDF theme and per-locale metadata in `config/`
+
+|UI Components
+|Antora UI customisations in `custom-ui/`
+
+|Build Scripts
+|`Makefile` and alternative Python orchestrator `build.py`
+
+|CI/CD
+|GitHub Actions workflows in `.github/`
+|===
+
+== Core Features
+
+=== Multi-format Output
+
+A single set of AsciiDoc files yields three independent artefacts.
+
+* *HTML* -- static site with a custom UI bundle and full-text search
+* *PDF* -- print/offline version with a custom theme and DejaVu Cyrillic fonts
+* *DOCX* -- editable document generated through Pandoc with an automatic cover page
+
+=== Quality-assurance and Security
+
+Checks run automatically in CI.
+
+* *Vale* -- AsciiDoc style linter (`vale.xml`)
+* *htmltest* -- link-integrity validation (`htmltest.log`)
+* *Shellcheck* -- Bash-script analysis
+* *Security audit* -- OSV-Scanner, Sandworm, and banned-pattern scan (non-blocking)
+
+== Build Pipeline
+
+Adaptadocx can be built with *Make* (default) or an *equivalent Python script*. Both produce identical artefacts in `build/`.
+
+=== Build modes
+
+*Local* (default) -- builds only the current branch `HEAD` or a branch set by `BUILD_REF`.
++
+[source,bash]
+----
+make build-all
+make build-all BUILD_REF=my-feature
+----
+
+*Tags* -- multiversion build over all Git tags.
++
+[source,bash]
+----
+make build-all BUILD_SCOPE=tags
+----
+
+Outputs are versioned and stored in:
+
+* `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
+* `build/docx/<locale>/<version>/adaptadocx-<locale>.docx`
+* copied to `site/<locale>/<version>/_downloads/`
+
+The header menu links *PDF* and *DOCX* always point to `_downloads` of the current version.
+
+=== Docker Environment
+
+The container image includes:
+
+* Node.js 20 and Ruby ≥ 2.7
+* Python 3.11+
+* Asciidoctor PDF
+* Vale, htmltest, Shellcheck
+* Graphviz
+* DejaVu fonts
+* `rsvg-convert` for SVG→PDF/SVG→PNG conversion
+
+=== Makefile Targets
+
+[cols="1,3"]
+|===
+|Target |Purpose
+
+|`make build-all`
+|Build *HTML + PDF + DOCX* (alias of `build-site`)
+
+|`make build-html`
+|Build HTML only
+
+|`make build-pdf`
+|Build PDF only
+
+|`make build-docx`
+|Build DOCX only
+
+|`make test`
+|Run Vale, htmltest and Shellcheck
+
+|`make clean`
+|Remove `build/`
+
+|`make release`
+|Zip artefacts after QA
+|===
+
+=== Python build script
+
+If `make` is not available, run the same tasks via `build.py` (Python 3.11+).
+
+[cols="1,3",options="header"]
+|===
+|Command |Purpose
+
+|`python3 build.py build-site` |HTML + PDF + DOCX
+|`python3 build.py build-html` |HTML only
+|`python3 build.py build-pdf`  |PDF only
+|`python3 build.py build-docx` |DOCX only
+|`python3 build.py test`       |Run tests (Vale, htmltest if site exists, Shellcheck)
+|`python3 build.py prep`       |Version substitution only
+|`python3 build.py clean`      |Remove `build/`
+|===
+
+Use either entry point -- mixing them in one run is unnecessary.
+
+=== Continuous Integration
+
+GitHub Actions defines three workflow groups.
+
+. *QA Checks* -- lints AsciiDoc, validates links, analyses scripts
+. *Security Audit* -- dependency and content audit (OSV-Scanner, Sandworm, banned patterns)
+. *Release* -- full multiversion build (`BUILD_SCOPE=tags`), packaging, and deployment to Netlify
+
+== Getting Started
+
+=== Installation (Docker, recommended)
+
+[source,bash]
+----
+docker build -t adaptadocx .
+# Makefile path
+docker run --rm -v "$(pwd)":/work adaptadocx make build-all
+# Python path
+docker run --rm -v "$(pwd)":/work adaptadocx python3 build.py build-site
+----
+
+=== Local Installation
+
+[source,bash]
+----
+npm ci --no-audit --no-fund
+# using Make
+make build-all
+# or using Python
+python3 build.py build-site
+----
+
+== Next Steps
+
+* xref:quick-start.adoc[]
+* xref:installation.adoc[]

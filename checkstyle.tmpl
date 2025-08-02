@@ -1,0 +1,12 @@
+{{ define "Fmt" }}
+<checkstyle>
+{{- range .Files }}
+  <file name="{{ .Path }}">
+  {{- range .Alerts }}
+    <error line="{{ .Line }}" column="{{ index .Span 0 }}" severity="{{ .Severity }}" message="{{ .Message }}" source="{{ .Check }}" />
+  {{- end }}
+  </file>
+{{- end }}
+</checkstyle>
+{{ end }}
+{{ template "Fmt" . }}
