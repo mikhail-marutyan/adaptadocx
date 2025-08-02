@@ -134,17 +134,21 @@ CI attaches `vale.xml` and `htmltest.log` to the run.
 
 == CI pipelines
 
-*Release* (tags):
+=== Release (tags)
+
 * Trigger: push to a tag.
 * Build in Docker with `BUILD_SCOPE=tags`.
 * Validate with *htmltest* and *Vale*.
 * Upload built site and deploy to production.
 
-*QA checks* (pull requests to `main`):
+=== QA checks (pull requests to `main`)
+
 * Lint shell scripts, run *Vale*.
 * Build and run *htmltest* for the current branch.
 
-*Security audit* (pull requests to `main`, `push` to tags):
+
+=== Security audit (pull requests to `main`, `push` to tags)
+
 * Non-blocking checks: *OSV-Scanner*, *Sandworm*, banned-pattern scan.
 * Summary published in the workflow run.
 

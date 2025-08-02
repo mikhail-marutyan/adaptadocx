@@ -62,7 +62,7 @@ Adaptadocx можно собирать *Make* (по умолчанию) или *
 === Режимы сборки
 
 *Локальный* (по умолчанию) -- собирает только текущую ветку `HEAD` или ветку, указанную в `BUILD_REF`.
-+
+
 [source,bash]
 ----
 make build-all
@@ -70,7 +70,7 @@ make build-all BUILD_REF=my-feature
 ----
 
 *По тегам* -- мультиверсийная сборка по всем Git-тегам.
-+
+
 [source,bash]
 ----
 make build-all BUILD_SCOPE=tags

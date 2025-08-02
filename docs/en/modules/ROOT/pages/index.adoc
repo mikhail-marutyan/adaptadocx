@@ -64,7 +64,7 @@ Adaptadocx can be built with *Make* (default) or an *equivalent Python script*. 
 === Build modes
 
 *Local* (default) -- builds only the current branch `HEAD` or a branch set by `BUILD_REF`.
-+
+
 [source,bash]
 ----
 make build-all
@@ -72,7 +72,7 @@ make build-all BUILD_REF=my-feature
 ----
 
 *Tags* -- multiversion build over all Git tags.
-+
+
 [source,bash]
 ----
 make build-all BUILD_SCOPE=tags

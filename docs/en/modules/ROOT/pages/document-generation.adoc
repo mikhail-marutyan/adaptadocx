@@ -117,7 +117,7 @@ base:
   font-size: 11
 ----
 
-*Output layout*:
+=== Output layout
 
 * `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
 * copied to `site/<locale>/<version>/_downloads/adaptadocx-<locale>.pdf`
