@@ -20,7 +20,7 @@
 == Режимы сборки
 
 *Локальный* -- собирается только текущая ветка `HEAD` или ветка, заданная через `BUILD_REF`.
-+
+
 [source,bash]
 ----
 make build-all
@@ -28,7 +28,7 @@ make build-all BUILD_REF=my-feature
 ----
 
 *Теги* -- мультиверсионная сборка по всем Git-тегам.
-+
+
 [source,bash]
 ----
 make build-all BUILD_SCOPE=tags
