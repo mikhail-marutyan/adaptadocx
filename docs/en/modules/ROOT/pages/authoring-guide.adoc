@@ -53,7 +53,7 @@ make build-all
 == Build modes
 
 *Local* -- default. Builds only the current branch *HEAD* or the branch set by *BUILD_REF*.
-+
+
 [source,bash]
 ----
 make build-all
@@ -61,7 +61,7 @@ make build-all BUILD_REF=my-feature
 ----
 
 *Tags* -- multiversion build over all Git tags.
-+
+
 [source,bash]
 ----
 make build-all BUILD_SCOPE=tags

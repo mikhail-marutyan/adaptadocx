@@ -38,11 +38,13 @@ make build-all BUILD_SCOPE=tags
 
 == Артефакты и размещение
 
-*PDF*
+=== PDF
+
 * `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
 * копируется в `site/<locale>/<version>/_downloads/adaptadocx-<locale>.pdf`
 
-*DOCX*
+=== DOCX
+
 * `build/docx/<locale>/<version>/adaptadocx-<locale>.docx`
 * копируется в `site/<locale>/<version>/_downloads/adaptadocx-<locale>.docx`
 
