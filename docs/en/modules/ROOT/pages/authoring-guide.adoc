@@ -71,11 +71,13 @@ Make variables: *BUILD_SCOPE* = *local* or *tags*, *BUILD_REF* defaults to *HEAD
 
 == Artefacts and layout
 
-*PDF output*
+=== PDF
+
 * `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
 * Copied to `site/<locale>/<version>/_downloads/adaptadocx-<locale>.pdf`
 
-*DOCX output*
+=== DOCX
+
 * `build/docx/<locale>/<version>/adaptadocx-<locale>.docx`
 * Copied to `site/<locale>/<version>/_downloads/adaptadocx-<locale>.docx`
 
