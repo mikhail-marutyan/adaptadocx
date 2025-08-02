@@ -170,7 +170,7 @@ The image is built once and reused by all CI jobs.
 
 |Security Audit
 |OSV-Scanner, Sandworm, banned-pattern scan
-|`pull_request` → `main`
+|`pull_request` → `main`, `push` → tags (`'*'`)
 
 |Release
 |Docker build, multiversion docs (`BUILD_SCOPE=tags`), zip artefacts, deploy

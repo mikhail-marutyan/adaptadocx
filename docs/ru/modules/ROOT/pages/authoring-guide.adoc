@@ -144,7 +144,7 @@ CI прикрепляет к запуску `vale.xml` и `htmltest.log`.
 * линт shell-скриптов, запуск *Vale*;
 * сборка и *htmltest* для текущей ветки.
 
-*Security audit* (pull request в `main`):
+*Security audit* (pull request в `main`, `push` в теги):
 * неблокирующие проверки: *OSV-Scanner*, *Sandworm*, поиск запрещённых паттернов;
 * краткая сводка публикуется в отчёте запуска.
 

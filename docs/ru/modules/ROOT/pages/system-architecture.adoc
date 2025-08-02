@@ -170,7 +170,7 @@ pandoc --from asciidoc \
 
 |Security Audit
 |OSV-Scanner, Sandworm, проверка запрещённых паттернов
-|`pull_request` → `main`
+|`pull_request` → `main`, `push` → теги (`'*'`)
 
 |Release
 |Контейнерная сборка, мультиверсионные доки (`BUILD_SCOPE=tags`), архив артефактов и деплой
