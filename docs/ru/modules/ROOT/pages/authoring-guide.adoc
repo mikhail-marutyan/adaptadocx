@@ -143,12 +143,12 @@ CI прикрепляет к запуску `vale.xml` и `htmltest.log`.
 * проверка *htmltest* и *Vale*;
 * загрузка собранного сайта и прод-деплой.
 
-=== QA checks* (pull request в `main`)
+=== QA checks (pull request в `main`)
 
 * линт shell-скриптов, запуск *Vale*;
 * сборка и *htmltest* для текущей ветки.
 
-=== Security audit* (pull request в `main`, `push` в теги)
+=== Security audit (pull request в `main`, `push` в теги)
 
 * неблокирующие проверки: *OSV-Scanner*, *Sandworm*, поиск запрещённых паттернов;
 * краткая сводка публикуется в отчёте запуска.
