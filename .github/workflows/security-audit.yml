@@ -3,6 +3,8 @@ name: Security audit
 on: 
   pull_request:
     branches: [main]
+  push:
+    tags: ['*']
 
 jobs:
   audit:

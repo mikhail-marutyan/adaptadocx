@@ -243,7 +243,7 @@ adaptadocx/
 | Workflow           | Purpose                                                                  | Trigger                |
 | ------------------ | ------------------------------------------------------------------------ | ---------------------- |
 | **QA Checks**      | Vale, htmltest, Shellcheck                                               | `pull_request` (`main`) |
-| **Security Audit** | OSV-Scanner, Sandworm, banned-patterns                                   | `pull_request` (`main`) |
+| **Security Audit** | OSV-Scanner, Sandworm, banned-patterns                                   | `pull_request` (`main`), `push` (tags) |
 | **Release**        | Docker build (with `BUILD_SCOPE=tags`), validate, zip, deploy to Netlify | `push` (tags)           |
 
 ---

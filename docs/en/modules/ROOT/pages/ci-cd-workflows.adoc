@@ -14,7 +14,7 @@ Adaptadocx automates linting, QA, security checks, and packaged builds with *Git
 |*Shellcheck* · *Vale* · *htmltest* (parallel), build in Docker
 
 |Security Audit
-|`pull_request` → *main*
+|`pull_request` → *main*, `push` → tags (`'*'`)
 |*OSV-Scanner* · *Sandworm* · banned-pattern scan (non-blocking)
 
 |Release
@@ -66,7 +66,7 @@ Reports are always uploaded (examples):
 
 File: `/.github/workflows/security-audit.yml`
 
-* Trigger: `pull_request` → *main*.
+* Trigger: `pull_request` → *main* and `push` to tags (`'*'`).
 * Steps: *OSV-Scanner*, *Sandworm audit*, *banned-pattern* scan, then a short summary to `$GITHUB_STEP_SUMMARY`.
 * Behavior: all checks use `continue-on-error: true` -- the audit warns but does not block the PR.
 * Outputs:

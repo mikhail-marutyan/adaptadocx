@@ -6,7 +6,7 @@ Adaptadocx applies layered auditing, dependency pinning, and incident-response p
 
 ## Multi-layer security auditing
 
-The **Security Audit** workflow runs on every *pull request* to `main` with `continue-on-error` enabled, so warnings surface without blocking builds.
+The **Security Audit** workflow runs on every *pull request* to `main` and on every `push` to a tag, with `continue-on-error` enabled so warnings surface without blocking builds.
 
 ### Security audit components
 
@@ -72,6 +72,7 @@ console\.log.*political.*message
 **Trigger events**
 
 * **pull_request** → `main`
+* **push** → tags (`*`)
 
 **Reporting**
 
