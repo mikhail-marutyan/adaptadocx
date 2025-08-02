@@ -20,7 +20,7 @@ Use either tool -- *never mix them in one run*.
 == Build modes
 
 *Local* -- builds only the current branch `HEAD` or a branch set via `BUILD_REF`.
-+
+
 [source,bash]
 ----
 make build-all
@@ -28,7 +28,7 @@ make build-all BUILD_REF=my-feature
 ----
 
 *Tags* -- multiversion build over all Git tags.
-+
+
 [source,bash]
 ----
 make build-all BUILD_SCOPE=tags
@@ -38,11 +38,13 @@ Make variables: `BUILD_SCOPE` = `local` or `tags`; `BUILD_REF` defaults to `HEAD
 
 == Artefacts and layout
 
-*PDF*
+=== PDF
+
 * `build/pdf/<locale>/<version>/adaptadocx-<locale>.pdf`
 * copied to `site/<locale>/<version>/_downloads/adaptadocx-<locale>.pdf`
 
-*DOCX*
+=== DOCX
+
 * `build/docx/<locale>/<version>/adaptadocx-<locale>.docx`
 * copied to `site/<locale>/<version>/_downloads/adaptadocx-<locale>.docx`
 
