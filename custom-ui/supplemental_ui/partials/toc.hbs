@@ -1,9 +1,9 @@
-{{#eq page.component.name 'ru'}}
-<aside class="toc sidebar" data-title="{{or page.attributes.toctitle 'Содержание'}}" data-levels="{{{or page.attributes.toclevels 2}}}">
-  <div class="toc-menu"></div>
-</aside>
+{{#if (eq page.component.name 'ru')}}
+  <aside class="toc sidebar" data-title="{{or page.attributes.toctitle 'Содержание'}}" data-levels="{{{or page.attributes.toclevels 2}}}">
+    <div class="toc-menu"></div>
+  </aside>
 {{else}}
-<aside class="toc sidebar" data-title="{{or page.attributes.toctitle 'Page contents'}}" data-levels="{{{or page.attributes.toclevels 2}}}">
-  <div class="toc-menu"></div>
-</aside>
-{{/eq}}
+  <aside class="toc sidebar" data-title="{{or page.attributes.toctitle 'Page contents'}}" data-levels="{{{or page.attributes.toclevels 2}}}">
+    <div class="toc-menu"></div>
+  </aside>
+{{/if}}
