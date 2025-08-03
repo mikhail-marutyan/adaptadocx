@@ -1,0 +1,61 @@
+.navbar-dropdown .navbar-item[onclick^="setTheme"] {
+  cursor: pointer;
+}
+
+/* Language and Downloads dropdown styling */
+.navbar-item.has-dropdown .navbar-dropdown {
+  min-width: 200px;
+}
+
+.navbar-dropdown .navbar-item {
+  white-space: nowrap;
+  padding: 0.5rem 1rem;
+}
+
+.navbar-dropdown .navbar-item:hover {
+  background-color: var(--color-gray-10);
+}
+
+/* Theme toggle styling */
+.theme-toggle .theme-circle {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, var(--color-jet-70) 50%, var(--color-white) 50%);
+  border: 1px solid var(--color-gray-30);
+  vertical-align: middle;
+}
+
+/* Icon styling for navbar dropdowns */
+.navbar-link .icon {
+  margin-right: 0;
+}
+
+.navbar-link .icon svg {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+}
+
+/* Footer styling */
+.footer {
+  background-color: var(--color-gray-10);
+  padding: 2rem 1.5rem;
+  margin-top: auto;
+}
+
+.footer .content p {
+  color: var(--color-gray-70);
+  font-size: 0.875rem;
+  margin: 0;
+}
+/* Ensure monospace fonts match body text size */
+pre,
+code,
+pre code,
+kbd,
+samp,
+tt {
+  font-size: 0.85rem !important;
+}
