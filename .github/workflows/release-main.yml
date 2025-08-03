@@ -23,12 +23,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "18"
-      - name: Sync docs version
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          for f in docs/*/antora.yml; do
-            sed -i "s/^version: .*/version: ${VERSION}/" "$f"
-          done
 
       - name: Build docs image
         run: docker build -t adaptadocx:latest .
