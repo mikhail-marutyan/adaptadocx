@@ -4,7 +4,6 @@
 [![Security](https://github.com/mikhail-marutyan/adaptadocx/actions/workflows/security-audit.yml/badge.svg)](https://github.com/mikhail-marutyan/adaptadocx/actions/workflows/security-audit.yml)
 [![Release](https://github.com/mikhail-marutyan/adaptadocx/actions/workflows/release.yml/badge.svg)](https://github.com/mikhail-marutyan/adaptadocx/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)]([https://deepwiki.com/arterm-sedov/cbap-mkdocs-ru](https://deepwiki.com/mikhail-marutyan/adaptadocx))
 
 **Live site:** **https://adaptadocx.netlify.app/**
 
