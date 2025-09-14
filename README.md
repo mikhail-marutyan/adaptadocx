@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/mikhail-marutyan/adaptadocx)
 
-**Live site:** **https://adaptadocx.netlify.app/**
+**Live site:** **https://adaptadocx.com**
 
 Adaptadocx is a documentation-publishing system built on Antora. It assembles multilingual AsciiDoc sources and produces **HTML**, **PDF**, and **DOCX**. The project ships with built-in QA checks, automated security scans, and CI workflows.
 
